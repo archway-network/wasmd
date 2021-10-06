@@ -55,8 +55,8 @@ func BeginBlock(context sdk.Context, block abci.RequestBeginBlock, keeper GasTra
 				rewardsByAddress[metadata.RewardAddress] = rewardByAddress
 			}
 
-			decGasLimit := sdk.NewDec(int64(txTrackingInfo.MaxGasAllowed))
-			decGasUsage := sdk.NewDec(int64(contractTrackingInfo.GasConsumed))
+			decGasLimit := sdk.NewDecFromBigInt(ConvertUint64ToBigInt(txTrackingInfo.MaxGasAllowed))
+			decGasUsage := sdk.NewDecFromBigInt(ConvertUint64ToBigInt(contractTrackingInfo.GasConsumed))
 
 			contractRewards := make([]sdk.DecCoin, len(txTrackingInfo.MaxContractRewards))
 			for i, rewardCoin := range txTrackingInfo.MaxContractRewards {

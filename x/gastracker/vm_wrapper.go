@@ -59,7 +59,6 @@ func (g GasTrackingWasmEngine) Instantiate(checksum wasmvm.Checksum, env wasmvmt
 		return response, gasUsed, err
 	}
 	wasmGasUsed := g.wasmGasRegister.FromWasmVMGas(gasUsed)
-	// TODO: Pass the reward address here
 	subMsg, err := g.createCustomGasTrackingMessage(wasmGasUsed, gstTypes.ContractOperation_CONTRACT_OPERATION_INSTANTIATION, contractInstantiationWrapper.RewardAddress)
 	if err != nil {
 		return response, gasUsed, err

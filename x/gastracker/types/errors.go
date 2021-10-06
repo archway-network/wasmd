@@ -14,6 +14,4 @@ var (
 	ErrContractInstanceMetadataNotFound = sdkErrors.Register(DefaultCodespace, 3, "Contract instance metadata not found")
 
 	ErrRewardEntryNotFound = sdkErrors.Register(DefaultCodespace, 4, "Reward entry not found")
-
-	ErrLeftOverThresholdOverflow = sdkErrors.Register(DefaultCodespace, 5, "leftOverThreshold contains value greater than Max int64")
 )

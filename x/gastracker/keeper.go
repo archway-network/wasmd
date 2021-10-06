@@ -3,7 +3,6 @@ package gastracker
 import (
 	gstTypes "github.com/CosmWasm/wasmd/x/gastracker/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"math"
 )
 
 var _ GasTrackingKeeper = &Keeper{}
@@ -31,10 +30,6 @@ func (k *Keeper) CreateOrMergeLeftOverRewardEntry(ctx sdk.Context, rewardAddress
 
 	var rewardEntry gstTypes.LeftOverRewardEntry
 	rewardsToBeDistributed := make(sdk.Coins, 0)
-
-	if leftOverThreshold > math.MaxInt64 {
-		return rewardsToBeDistributed, gstTypes.ErrLeftOverThresholdOverflow
-	}
 
 	bz := gstKvStore.Get(gstTypes.GetRewardEntryKey(rewardAddress))
 	if bz != nil {
@@ -65,7 +60,7 @@ func (k *Keeper) CreateOrMergeLeftOverRewardEntry(ctx sdk.Context, rewardAddress
 	// Reallocate to length of rewardEntry.ContractRewards
 	rewardsToBeDistributed = make(sdk.Coins, len(rewardEntry.ContractRewards))
 
-	leftOverDec := sdk.NewDec(int64(leftOverThreshold))
+	leftOverDec := sdk.NewDecFromBigInt(ConvertUint64ToBigInt(leftOverThreshold))
 	rewardIndex := 0
 	for i := range rewardEntry.ContractRewards {
 		truncatedDec := rewardEntry.ContractRewards[i].Amount.TruncateDec()
