@@ -64,6 +64,8 @@ func BeginBlock(context sdk.Context, block abci.RequestBeginBlock, keeper GasTra
 			}
 			totalContractRewardsInTx = totalContractRewardsInTx.Add(contractRewards...)
 			rewardsByAddress[metadata.RewardAddress] = rewardsByAddress[metadata.RewardAddress].Add(contractRewards...)
+
+			context.Logger().Info("Calculated Contract rewards:", "contractAddress", contractTrackingInfo.Address, "contractRewards", contractRewards)
 		}
 
 		totalContractRewardsPerBlock = totalContractRewardsPerBlock.Add(totalContractRewardsInTx...)
