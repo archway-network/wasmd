@@ -37,7 +37,8 @@ message TransactionTracking {
 message ContractGasTracking {
   string address = 1;
   uint64 gas_consumed = 2;
-  ContractOperation operation = 3;
+  bool is_eligible_for_reward = 3;
+  ContractOperation operation = 4;
 }
 
 // Tracking gas consumption for all tx in a particular block
@@ -49,6 +50,8 @@ message ContractOperationInfo {
   ContractOperation operation = 2;
   // Only set in case of instantiate operation
   string reward_address = 3;
+  // Only set in case of instantiate operation
+  bool gas_rebate_to_end_user = 4;
 }
 
 // Custom wrapper around Query request
@@ -66,12 +69,16 @@ message GasTrackingQueryResultWrapper {
 // Custom wrapper around contract instantiation request
 message ContractInstantiationRequestWrapper {
   string reward_address = 1;
+  bool gas_rebate_to_user = 2;
   // Base64 encoding of instantiation data
-  string instantiation_request = 2;
+  string instantiation_request = 3;
 }
 
 // Contract instance metadata
-message ContractInstanceMetadata { string reward_address = 1; }
+message ContractInstanceMetadata {
+  string reward_address = 1;
+  bool gas_rebate_to_user = 2;
+}
 
 // Reward entry per beneficiary address
 message LeftOverRewardEntry {

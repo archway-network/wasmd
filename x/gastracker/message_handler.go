@@ -25,16 +25,27 @@ func (g GasConsumptionMsgHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.
 		return events, data, err
 	}
 
-	err = g.gastrackingKeeper.TrackContractGasUsage(ctx, contractAddr.String(), contractOperationInfo.GasConsumed, contractOperationInfo.Operation)
-	if err != nil {
-		return events, data, err
-	}
-
+	var contractInstanceMetadata gstTypes.ContractInstanceMetadata
 	if contractOperationInfo.Operation == gstTypes.ContractOperation_CONTRACT_OPERATION_INSTANTIATION {
-		err = g.gastrackingKeeper.AddNewContractMetadata(ctx, contractAddr.String(), gstTypes.ContractInstanceMetadata{RewardAddress: contractOperationInfo.RewardAddress})
+		contractInstanceMetadata = gstTypes.ContractInstanceMetadata{RewardAddress: contractOperationInfo.RewardAddress, GasRebateToUser: contractOperationInfo.GasRebateToEndUser}
+		err = g.gastrackingKeeper.AddNewContractMetadata(ctx, contractAddr.String(), contractInstanceMetadata)
 		if err != nil {
 			return events, data, err
 		}
+	} else {
+		contractInstanceMetadata, err = g.gastrackingKeeper.GetNewContractMetadata(ctx, contractAddr.String())
+		if err != nil {
+			return events, data, err
+		}
+	}
+
+	if contractOperationInfo.GasRebateToEndUser {
+		ctx.GasMeter().RefundGas(contractOperationInfo.GasConsumed, "Gas Refund for smart contract execution")
+	}
+
+	err = g.gastrackingKeeper.TrackContractGasUsage(ctx, contractAddr.String(), contractOperationInfo.GasConsumed, contractOperationInfo.Operation, !contractOperationInfo.GasRebateToEndUser)
+	if err != nil {
+		return events, data, err
 	}
 
 	return events, data, nil

@@ -37,9 +37,18 @@ func NewGasTrackingWASMQueryPlugin(gasTrackingKeeper GasTrackingKeeper, wasmKeep
 				return nil, err
 			}
 
+			contractInstanceMetadata, err := gasTrackingKeeper.GetNewContractMetadata(ctx, request.Smart.ContractAddr)
+			if err != nil {
+				return nil, err
+			}
+
+			if contractInstanceMetadata.GasRebateToUser {
+				ctx.GasMeter().RefundGas(gasTrackingQueryResultWrapper.GasConsumed, "Gas Refund for smart contract execution")
+			}
+
 			ctx.Logger().Info("Got the tracking for Query", "gasConsumed", gasTrackingQueryResultWrapper.GasConsumed, "Contract address", request.Smart.ContractAddr)
 
-			err = gasTrackingKeeper.TrackContractGasUsage(ctx, request.Smart.ContractAddr, gasTrackingQueryResultWrapper.GasConsumed, gstTypes.ContractOperation_CONTRACT_OPERATION_QUERY)
+			err = gasTrackingKeeper.TrackContractGasUsage(ctx, request.Smart.ContractAddr, gasTrackingQueryResultWrapper.GasConsumed, gstTypes.ContractOperation_CONTRACT_OPERATION_QUERY, !contractInstanceMetadata.GasRebateToUser)
 			if err != nil {
 				return nil, err
 			}

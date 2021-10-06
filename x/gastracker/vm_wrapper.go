@@ -16,9 +16,8 @@ type GasTrackingWasmEngine struct {
 	wasmGasRegister wasmkeeper.WasmGasRegister
 }
 
-func (g GasTrackingWasmEngine) createCustomGasTrackingMessage(wasmGasUsed uint64, operation gstTypes.ContractOperation, rewardAddress string) (*wasmvmtypes.SubMsg, error) {
-	gasConsumptionInfo := gstTypes.ContractOperationInfo{GasConsumed: wasmGasUsed, Operation: operation, RewardAddress: rewardAddress}
-	bz, err := json.Marshal(gasConsumptionInfo)
+func (g GasTrackingWasmEngine) createCustomGasTrackingMessage(contractOperationInfo gstTypes.ContractOperationInfo) (*wasmvmtypes.SubMsg, error) {
+	bz, err := json.Marshal(contractOperationInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +58,12 @@ func (g GasTrackingWasmEngine) Instantiate(checksum wasmvm.Checksum, env wasmvmt
 		return response, gasUsed, err
 	}
 	wasmGasUsed := g.wasmGasRegister.FromWasmVMGas(gasUsed)
-	subMsg, err := g.createCustomGasTrackingMessage(wasmGasUsed, gstTypes.ContractOperation_CONTRACT_OPERATION_INSTANTIATION, contractInstantiationWrapper.RewardAddress)
+	subMsg, err := g.createCustomGasTrackingMessage(gstTypes.ContractOperationInfo{
+		GasConsumed:        wasmGasUsed,
+		Operation:          gstTypes.ContractOperation_CONTRACT_OPERATION_INSTANTIATION,
+		RewardAddress:      contractInstantiationWrapper.RewardAddress,
+		GasRebateToEndUser: contractInstantiationWrapper.GasRebateToUser,
+	})
 	if err != nil {
 		return response, gasUsed, err
 	}
@@ -73,7 +77,10 @@ func (g GasTrackingWasmEngine) Execute(code wasmvm.Checksum, env wasmvmtypes.Env
 		return response, gasUsed, err
 	}
 	wasmGasUsed := g.wasmGasRegister.FromWasmVMGas(gasUsed)
-	subMsg, err := g.createCustomGasTrackingMessage(wasmGasUsed, gstTypes.ContractOperation_CONTRACT_OPERATION_EXECUTION, "")
+	subMsg, err := g.createCustomGasTrackingMessage(gstTypes.ContractOperationInfo{
+		GasConsumed:        wasmGasUsed,
+		Operation:          gstTypes.ContractOperation_CONTRACT_OPERATION_EXECUTION,
+	})
 	if err != nil {
 		return response, gasUsed, err
 	}
@@ -116,7 +123,10 @@ func (g GasTrackingWasmEngine) Migrate(checksum wasmvm.Checksum, env wasmvmtypes
 		return response, gasUsed, err
 	}
 	wasmGasUsed := g.wasmGasRegister.FromWasmVMGas(gasUsed)
-	subMsg, err := g.createCustomGasTrackingMessage(wasmGasUsed, gstTypes.ContractOperation_CONTRACT_OPERATION_MIGRATE, "")
+	subMsg, err := g.createCustomGasTrackingMessage(gstTypes.ContractOperationInfo{
+		GasConsumed:        wasmGasUsed,
+		Operation:          gstTypes.ContractOperation_CONTRACT_OPERATION_MIGRATE,
+	})
 	if err != nil {
 		return response, gasUsed, err
 	}
@@ -130,7 +140,10 @@ func (g GasTrackingWasmEngine) Sudo(checksum wasmvm.Checksum, env wasmvmtypes.En
 		return response, gasUsed, err
 	}
 	wasmGasUsed := g.wasmGasRegister.FromWasmVMGas(gasUsed)
-	subMsg, err := g.createCustomGasTrackingMessage(wasmGasUsed, gstTypes.ContractOperation_CONTRACT_OPERATION_SUDO, "")
+	subMsg, err := g.createCustomGasTrackingMessage(gstTypes.ContractOperationInfo{
+		GasConsumed:        wasmGasUsed,
+		Operation:          gstTypes.ContractOperation_CONTRACT_OPERATION_SUDO,
+	})
 	if err != nil {
 		return response, gasUsed, err
 	}
@@ -144,7 +157,10 @@ func (g GasTrackingWasmEngine) Reply(checksum wasmvm.Checksum, env wasmvmtypes.E
 		return response, gasUsed, err
 	}
 	wasmGasUsed := g.wasmGasRegister.FromWasmVMGas(gasUsed)
-	subMsg, err := g.createCustomGasTrackingMessage(wasmGasUsed, gstTypes.ContractOperation_CONTRACT_OPERATION_REPLY, "")
+	subMsg, err := g.createCustomGasTrackingMessage(gstTypes.ContractOperationInfo{
+		GasConsumed:        wasmGasUsed,
+		Operation:          gstTypes.ContractOperation_CONTRACT_OPERATION_REPLY,
+	})
 	if err != nil {
 		return response, gasUsed, err
 	}
@@ -170,7 +186,10 @@ func (g GasTrackingWasmEngine) IBCChannelConnect(checksum wasmvm.Checksum, env w
 		return response, gasUsed, err
 	}
 	wasmGasUsed := g.wasmGasRegister.FromWasmVMGas(gasUsed)
-	subMsg, err := g.createCustomGasTrackingMessage(wasmGasUsed, gstTypes.ContractOperation_CONTRACT_OPERATION_IBC, "")
+	subMsg, err := g.createCustomGasTrackingMessage(gstTypes.ContractOperationInfo{
+		GasConsumed:        wasmGasUsed,
+		Operation:          gstTypes.ContractOperation_CONTRACT_OPERATION_IBC,
+	})
 	if err != nil {
 		return response, gasUsed, err
 	}
@@ -184,7 +203,10 @@ func (g GasTrackingWasmEngine) IBCChannelClose(checksum wasmvm.Checksum, env was
 		return response, gasUsed, err
 	}
 	wasmGasUsed := g.wasmGasRegister.FromWasmVMGas(gasUsed)
-	subMsg, err := g.createCustomGasTrackingMessage(wasmGasUsed, gstTypes.ContractOperation_CONTRACT_OPERATION_IBC, "")
+	subMsg, err := g.createCustomGasTrackingMessage(gstTypes.ContractOperationInfo{
+		GasConsumed:        wasmGasUsed,
+		Operation:          gstTypes.ContractOperation_CONTRACT_OPERATION_IBC,
+	})
 	if err != nil {
 		return response, gasUsed, err
 	}
@@ -198,7 +220,10 @@ func (g GasTrackingWasmEngine) IBCPacketReceive(checksum wasmvm.Checksum, env wa
 		return response, gasUsed, err
 	}
 	wasmGasUsed := g.wasmGasRegister.FromWasmVMGas(gasUsed)
-	subMsg, err := g.createCustomGasTrackingMessage(wasmGasUsed, gstTypes.ContractOperation_CONTRACT_OPERATION_IBC, "")
+	subMsg, err := g.createCustomGasTrackingMessage(gstTypes.ContractOperationInfo{
+		GasConsumed:        wasmGasUsed,
+		Operation:          gstTypes.ContractOperation_CONTRACT_OPERATION_IBC,
+	})
 	if err != nil {
 		return response, gasUsed, err
 	}
@@ -212,7 +237,10 @@ func (g GasTrackingWasmEngine) IBCPacketAck(checksum wasmvm.Checksum, env wasmvm
 		return response, gasUsed, err
 	}
 	wasmGasUsed := g.wasmGasRegister.FromWasmVMGas(gasUsed)
-	subMsg, err := g.createCustomGasTrackingMessage(wasmGasUsed, gstTypes.ContractOperation_CONTRACT_OPERATION_IBC, "")
+	subMsg, err := g.createCustomGasTrackingMessage(gstTypes.ContractOperationInfo{
+		GasConsumed:        wasmGasUsed,
+		Operation:          gstTypes.ContractOperation_CONTRACT_OPERATION_IBC,
+	})
 	if err != nil {
 		return response, gasUsed, err
 	}
@@ -226,7 +254,10 @@ func (g GasTrackingWasmEngine) IBCPacketTimeout(checksum wasmvm.Checksum, env wa
 		return response, gasUsed, err
 	}
 	wasmGasUsed := g.wasmGasRegister.FromWasmVMGas(gasUsed)
-	subMsg, err := g.createCustomGasTrackingMessage(wasmGasUsed, gstTypes.ContractOperation_CONTRACT_OPERATION_IBC, "")
+	subMsg, err := g.createCustomGasTrackingMessage(gstTypes.ContractOperationInfo{
+		GasConsumed:        wasmGasUsed,
+		Operation:          gstTypes.ContractOperation_CONTRACT_OPERATION_IBC,
+	})
 	if err != nil {
 		return response, gasUsed, err
 	}

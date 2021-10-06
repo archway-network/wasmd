@@ -9,7 +9,7 @@ var _ GasTrackingKeeper = &Keeper{}
 
 type GasTrackingKeeper interface {
 	TrackNewTx(ctx sdk.Context, fee []*sdk.DecCoin, gasLimit uint64)  error
-	TrackContractGasUsage(ctx sdk.Context, contractAddress string, gasUsed uint64, operation gstTypes.ContractOperation) error
+	TrackContractGasUsage(ctx sdk.Context, contractAddress string, gasUsed uint64, operation gstTypes.ContractOperation, isEligibleForReward bool) error
 	GetCurrentBlockTrackingInfo(ctx sdk.Context) (gstTypes.BlockGasTracking, error)
 	TrackNewBlock(ctx sdk.Context, blockGasTracking gstTypes.BlockGasTracking) error
 	AddNewContractMetadata(ctx sdk.Context, address string, metadata gstTypes.ContractInstanceMetadata) error
@@ -181,7 +181,7 @@ func (k *Keeper) TrackNewTx(ctx sdk.Context, fee []*sdk.DecCoin, gasLimit uint64
 	return nil
 }
 
-func (k *Keeper) TrackContractGasUsage(ctx sdk.Context, contractAddress string, gasUsed uint64, operation gstTypes.ContractOperation) error {
+func (k *Keeper) TrackContractGasUsage(ctx sdk.Context, contractAddress string, gasUsed uint64, operation gstTypes.ContractOperation, isEligibleForReward bool) error {
 	gstKvStore := ctx.KVStore(k.key)
 	bz := gstKvStore.Get([]byte(gstTypes.CurrentBlockTrackingKey))
 	if bz == nil {
@@ -202,6 +202,7 @@ func (k *Keeper) TrackContractGasUsage(ctx sdk.Context, contractAddress string, 
 		Address:     contractAddress,
 		GasConsumed: gasUsed,
 		Operation: operation,
+		IsEligibleForReward: isEligibleForReward,
 	})
 	bz, err = currentBlockGasTracking.Marshal()
 	if err != nil {
