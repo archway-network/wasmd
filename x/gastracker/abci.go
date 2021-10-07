@@ -43,6 +43,7 @@ func BeginBlock(context sdk.Context, block abci.RequestBeginBlock, keeper GasTra
 		for _, contractTrackingInfo := range txTrackingInfo.ContractTrackingInfos {
 			if !contractTrackingInfo.IsEligibleForReward {
 				context.Logger().Info("Contract is not eligible for reward, skipping calculation.", "contractAddress", contractTrackingInfo.Address)
+				continue
 			}
 
 			metadata, err := keeper.GetNewContractMetadata(context, contractTrackingInfo.Address)

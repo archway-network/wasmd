@@ -43,6 +43,7 @@ func NewGasTrackingWASMQueryPlugin(gasTrackingKeeper GasTrackingKeeper, wasmKeep
 			}
 
 			if contractInstanceMetadata.GasRebateToUser {
+				ctx.Logger().Info("Refunding gas to the user", "contractAddress", request.Smart.ContractAddr, "gasConsumed", gasTrackingQueryResultWrapper.GasConsumed)
 				ctx.GasMeter().RefundGas(gasTrackingQueryResultWrapper.GasConsumed, "Gas Refund for smart contract execution")
 			}
 

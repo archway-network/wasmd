@@ -39,11 +39,12 @@ func (g GasConsumptionMsgHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.
 		}
 	}
 
-	if contractOperationInfo.GasRebateToEndUser {
+	if contractInstanceMetadata.GasRebateToUser {
+		ctx.Logger().Info("Refunding gas to the user", "contractAddress", contractAddr.String(), "gasConsumed", contractOperationInfo.GasConsumed)
 		ctx.GasMeter().RefundGas(contractOperationInfo.GasConsumed, "Gas Refund for smart contract execution")
 	}
 
-	err = g.gastrackingKeeper.TrackContractGasUsage(ctx, contractAddr.String(), contractOperationInfo.GasConsumed, contractOperationInfo.Operation, !contractOperationInfo.GasRebateToEndUser)
+	err = g.gastrackingKeeper.TrackContractGasUsage(ctx, contractAddr.String(), contractOperationInfo.GasConsumed, contractOperationInfo.Operation, !contractInstanceMetadata.GasRebateToUser)
 	if err != nil {
 		return events, data, err
 	}
