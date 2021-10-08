@@ -9,6 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
@@ -22,10 +23,11 @@ var (
 type AppModule struct{
 	bankKeeper bankkeeper.Keeper
 	keeper GasTrackingKeeper
+	mintKeeper mintkeeper.Keeper
 }
 
-func NewAppModule(keeper GasTrackingKeeper, bk bankkeeper.Keeper) AppModule {
-	return AppModule{keeper: keeper, bankKeeper: bk}
+func NewAppModule(keeper GasTrackingKeeper, bk bankkeeper.Keeper, mk mintkeeper.Keeper) AppModule {
+	return AppModule{keeper: keeper, bankKeeper: bk, mintKeeper: mk}
 }
 
 func (a AppModule) Name() string {
@@ -101,7 +103,7 @@ func (a AppModule) RegisterServices(configurator module.Configurator) {
 }
 
 func (a AppModule) BeginBlock(context sdk.Context, block abci.RequestBeginBlock) {
-	BeginBlock(context, block, a.keeper, a.bankKeeper)
+	BeginBlock(context, block, a.keeper, a.bankKeeper, a.mintKeeper)
 }
 
 func (a AppModule) EndBlock(context sdk.Context, block abci.RequestEndBlock) []abci.ValidatorUpdate {

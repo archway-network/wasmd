@@ -5,6 +5,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -21,7 +22,7 @@ func EmitRewardPayingEvent(context sdk.Context, rewardAddress string, rewardsPay
 	})
 }
 
-func BeginBlock(context sdk.Context, block abci.RequestBeginBlock, keeper GasTrackingKeeper, bankKeeper bankkeeper.Keeper) {
+func BeginBlock(context sdk.Context, block abci.RequestBeginBlock, keeper GasTrackingKeeper, bankKeeper bankkeeper.Keeper, mintKeeper mintkeeper.Keeper) {
 	blockTxDetails, err := keeper.GetCurrentBlockTrackingInfo(context)
 	if err != nil {
 		panic(err)
@@ -32,6 +33,12 @@ func BeginBlock(context sdk.Context, block abci.RequestBeginBlock, keeper GasTra
 	rewardsByAddress := make(map[string]sdk.DecCoins)
 
 	totalContractRewardsPerBlock := make(sdk.DecCoins, 0)
+
+	minter := mintKeeper.GetMinter(context)
+	params := mintKeeper.GetParams(context)
+	totalInflationFee := sdk.NewDecCoinFromCoin(minter.BlockProvision(params))
+	// TODO: Take the percentage value from governance
+	contractTotalInflationRewards := sdk.NewDecCoinFromDec(totalInflationFee.Denom, totalInflationFee.Amount.MulInt64(20).QuoInt64(100))
 
 	for _, txTrackingInfo := range blockTxDetails.TxTrackingInfos {
 		totalContractRewardsInTx := make(sdk.DecCoins, len(txTrackingInfo.MaxContractRewards))
@@ -54,10 +61,14 @@ func BeginBlock(context sdk.Context, block abci.RequestBeginBlock, keeper GasTra
 			decGasLimit := sdk.NewDecFromBigInt(ConvertUint64ToBigInt(txTrackingInfo.MaxGasAllowed))
 			decGasUsage := sdk.NewDecFromBigInt(ConvertUint64ToBigInt(contractTrackingInfo.GasConsumed))
 
-			contractRewards := make([]sdk.DecCoin, len(txTrackingInfo.MaxContractRewards))
+			contractRewards := make(sdk.DecCoins, len(txTrackingInfo.MaxContractRewards))
 			for i, rewardCoin := range txTrackingInfo.MaxContractRewards {
 				contractRewards[i] = sdk.NewDecCoinFromDec(rewardCoin.Denom, rewardCoin.Amount.Mul(decGasUsage).Quo(decGasLimit))
 			}
+			contractInflationReward := sdk.NewDecCoinFromDec(contractTotalInflationRewards.Denom, contractTotalInflationRewards.Amount.Mul(decGasUsage).Quo(decGasLimit))
+			context.Logger().Info("Calculated contract inflation rewards:", "contractAddress", contractTrackingInfo.Address, "contractInflationReward", contractInflationReward)
+			contractRewards = contractRewards.Add(contractInflationReward)
+
 			if currentRewardData, ok := rewardsByAddress[metadata.RewardAddress]; !ok {
 				rewardsByAddress[metadata.RewardAddress] = contractRewards
 			} else {
