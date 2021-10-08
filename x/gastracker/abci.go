@@ -33,7 +33,6 @@ func BeginBlock(context sdk.Context, block abci.RequestBeginBlock, keeper GasTra
 
 	totalContractRewardsPerBlock := make(sdk.DecCoins, 0)
 
-	// TODO: Maybe we can parallel processing this, since most of it is mathematical computation
 	for _, txTrackingInfo := range blockTxDetails.TxTrackingInfos {
 		totalContractRewardsInTx := make(sdk.DecCoins, len(txTrackingInfo.MaxContractRewards))
 		for i, _ := range totalContractRewardsInTx {
@@ -52,14 +51,6 @@ func BeginBlock(context sdk.Context, block abci.RequestBeginBlock, keeper GasTra
 			}
 			context.Logger().Info("Got the metadata", "Metadata", metadata)
 
-			if _, ok := rewardsByAddress[metadata.RewardAddress]; !ok {
-				rewardByAddress := make(sdk.DecCoins, len(txTrackingInfo.MaxContractRewards))
-				for i := range rewardByAddress {
-					rewardByAddress[i] = sdk.NewDecCoin(txTrackingInfo.MaxContractRewards[i].Denom, sdk.NewInt(0))
-				}
-				rewardsByAddress[metadata.RewardAddress] = rewardByAddress
-			}
-
 			decGasLimit := sdk.NewDecFromBigInt(ConvertUint64ToBigInt(txTrackingInfo.MaxGasAllowed))
 			decGasUsage := sdk.NewDecFromBigInt(ConvertUint64ToBigInt(contractTrackingInfo.GasConsumed))
 
@@ -67,8 +58,12 @@ func BeginBlock(context sdk.Context, block abci.RequestBeginBlock, keeper GasTra
 			for i, rewardCoin := range txTrackingInfo.MaxContractRewards {
 				contractRewards[i] = sdk.NewDecCoinFromDec(rewardCoin.Denom, rewardCoin.Amount.Mul(decGasUsage).Quo(decGasLimit))
 			}
+			if currentRewardData, ok := rewardsByAddress[metadata.RewardAddress]; !ok {
+				rewardsByAddress[metadata.RewardAddress] = contractRewards
+			} else {
+				rewardsByAddress[metadata.RewardAddress] = rewardsByAddress[metadata.RewardAddress].Add(currentRewardData...)
+			}
 			totalContractRewardsInTx = totalContractRewardsInTx.Add(contractRewards...)
-			rewardsByAddress[metadata.RewardAddress] = rewardsByAddress[metadata.RewardAddress].Add(contractRewards...)
 
 			context.Logger().Info("Calculated Contract rewards:", "contractAddress", contractTrackingInfo.Address, "contractRewards", contractRewards)
 		}
