@@ -1,8 +1,6 @@
 package keeper
 
 import (
-	"fmt"
-
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -11,7 +9,7 @@ import (
 	"github.com/CosmWasm/wasmd/x/wasm/types"
 )
 
-// Messenger is an extension point for custom wasmd message handling
+// Messenger is an extension point for custom archwayd message handling
 type Messenger interface {
 	// DispatchMsg encodes the wasmVM message and dispatches it.
 	DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg wasmvmtypes.CosmosMsg) (events []sdk.Event, data [][]byte, err error)
@@ -133,10 +131,8 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 				},
 			}
 		} else {
-			// Issue #759 - we don't return error string for worries of non-determinism
-			moduleLogger(ctx).Info("Redacting submessage error", "cause", err)
 			result = wasmvmtypes.SubcallResult{
-				Err: redactError(err).Error(),
+				Err: err.Error(),
 			}
 		}
 
@@ -157,23 +153,6 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		}
 	}
 	return rsp, nil
-}
-
-// Issue #759 - we don't return error string for worries of non-determinism
-func redactError(err error) error {
-	// Do not redact system errors
-	// SystemErrors must be created in x/wasm and we can ensure determinism
-	if wasmvmtypes.ToSystemError(err) != nil {
-		return err
-	}
-
-	// FIXME: do we want to hardcode some constant string mappings here as well?
-	// Or better document them? (SDK error string may change on a patch release to fix wording)
-	// sdk/11 is out of gas
-	// sdk/5 is insufficient funds (on bank send)
-	// (we can theoretically redact less in the future, but this is a first step to safety)
-	codespace, code, _ := sdkerrors.ABCIInfo(err, false)
-	return fmt.Errorf("codespace: %s, code: %d", codespace, code)
 }
 
 func filterEvents(events []sdk.Event) []sdk.Event {

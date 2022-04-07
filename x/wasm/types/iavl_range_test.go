@@ -63,7 +63,6 @@ func TestIavlRangeBounds(t *testing.T) {
 			}
 			items := consume(iter)
 			require.Equal(t, tc.expected, items)
-			iter.Close()
 		})
 	}
 }
@@ -74,6 +73,8 @@ type KV struct {
 }
 
 func consume(itr store.Iterator) []KV {
+	defer itr.Close()
+
 	var res []KV
 	for ; itr.Valid(); itr.Next() {
 		k, v := itr.Key(), itr.Value()

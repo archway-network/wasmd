@@ -46,12 +46,10 @@
   
 - [cosmwasm/wasm/v1/proposal.proto](#cosmwasm/wasm/v1/proposal.proto)
     - [ClearAdminProposal](#cosmwasm.wasm.v1.ClearAdminProposal)
-    - [ExecuteContractProposal](#cosmwasm.wasm.v1.ExecuteContractProposal)
     - [InstantiateContractProposal](#cosmwasm.wasm.v1.InstantiateContractProposal)
     - [MigrateContractProposal](#cosmwasm.wasm.v1.MigrateContractProposal)
     - [PinCodesProposal](#cosmwasm.wasm.v1.PinCodesProposal)
     - [StoreCodeProposal](#cosmwasm.wasm.v1.StoreCodeProposal)
-    - [SudoContractProposal](#cosmwasm.wasm.v1.SudoContractProposal)
     - [UnpinCodesProposal](#cosmwasm.wasm.v1.UnpinCodesProposal)
     - [UpdateAdminProposal](#cosmwasm.wasm.v1.UpdateAdminProposal)
   
@@ -77,6 +75,21 @@
     - [QuerySmartContractStateResponse](#cosmwasm.wasm.v1.QuerySmartContractStateResponse)
   
     - [Query](#cosmwasm.wasm.v1.Query)
+  
+- [cosmwasm/wasm/v1/types_2.proto](#cosmwasm/wasm/v1/types_2.proto)
+    - [BlockGasTracking](#cosmwasm.wasm.v1.BlockGasTracking)
+    - [ContractGasTracking](#cosmwasm.wasm.v1.ContractGasTracking)
+    - [ContractInstanceMetadata](#cosmwasm.wasm.v1.ContractInstanceMetadata)
+    - [ContractInstantiationRequestWrapper](#cosmwasm.wasm.v1.ContractInstantiationRequestWrapper)
+    - [ContractOperationInfo](#cosmwasm.wasm.v1.ContractOperationInfo)
+    - [GasTrackingQueryRequestWrapper](#cosmwasm.wasm.v1.GasTrackingQueryRequestWrapper)
+    - [GasTrackingQueryResultWrapper](#cosmwasm.wasm.v1.GasTrackingQueryResultWrapper)
+    - [GenesisState](#cosmwasm.wasm.v1.GenesisState)
+    - [LeftOverRewardEntry](#cosmwasm.wasm.v1.LeftOverRewardEntry)
+    - [RewardDistributionEvent](#cosmwasm.wasm.v1.RewardDistributionEvent)
+    - [TransactionTracking](#cosmwasm.wasm.v1.TransactionTracking)
+  
+    - [ContractOperation](#cosmwasm.wasm.v1.ContractOperation)
   
 - [Scalar Value Types](#scalar-value-types)
 
@@ -660,27 +673,6 @@ contract.
 
 
 
-<a name="cosmwasm.wasm.v1.ExecuteContractProposal"></a>
-
-### ExecuteContractProposal
-ExecuteContractProposal gov proposal content type to call execute on a
-contract.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `title` | [string](#string) |  | Title is a short summary |
-| `description` | [string](#string) |  | Description is a human readable text |
-| `run_as` | [string](#string) |  | RunAs is the address that is passed to the contract's environment as sender |
-| `contract` | [string](#string) |  | Contract is the address of the smart contract |
-| `msg` | [bytes](#bytes) |  | Msg json encoded message to be passed to the contract as execute |
-| `funds` | [cosmos.base.v1beta1.Coin](#cosmos.base.v1beta1.Coin) | repeated | Funds coins that are transferred to the contract on instantiation |
-
-
-
-
-
-
 <a name="cosmwasm.wasm.v1.InstantiateContractProposal"></a>
 
 ### InstantiateContractProposal
@@ -713,11 +705,10 @@ MigrateContractProposal gov proposal content type to migrate a contract.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | `title` | [string](#string) |  | Title is a short summary |
-| `description` | [string](#string) |  | Description is a human readable text
-
-Note: skipping 3 as this was previously used for unneeded run_as |
+| `description` | [string](#string) |  | Description is a human readable text |
+| `run_as` | [string](#string) |  | RunAs is the address that is passed to the contract's environment as sender |
 | `contract` | [string](#string) |  | Contract is the address of the smart contract |
-| `code_id` | [uint64](#uint64) |  | CodeID references the new WASM codesudo |
+| `code_id` | [uint64](#uint64) |  | CodeID references the new WASM code |
 | `msg` | [bytes](#bytes) |  | Msg json encoded message to be passed to the contract on migration |
 
 
@@ -756,24 +747,6 @@ StoreCodeProposal gov proposal content type to submit WASM code to the system
 | `run_as` | [string](#string) |  | RunAs is the address that is passed to the contract's environment as sender |
 | `wasm_byte_code` | [bytes](#bytes) |  | WASMByteCode can be raw or gzip compressed |
 | `instantiate_permission` | [AccessConfig](#cosmwasm.wasm.v1.AccessConfig) |  | InstantiatePermission to apply on contract creation, optional |
-
-
-
-
-
-
-<a name="cosmwasm.wasm.v1.SudoContractProposal"></a>
-
-### SudoContractProposal
-SudoContractProposal gov proposal content type to call sudo on a contract.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `title` | [string](#string) |  | Title is a short summary |
-| `description` | [string](#string) |  | Description is a human readable text |
-| `contract` | [string](#string) |  | Contract is the address of the smart contract |
-| `msg` | [bytes](#bytes) |  | Msg json encoded message to be passed to the contract as sudo |
 
 
 
@@ -1162,11 +1135,226 @@ Query provides defines the gRPC querier service
 | `ContractHistory` | [QueryContractHistoryRequest](#cosmwasm.wasm.v1.QueryContractHistoryRequest) | [QueryContractHistoryResponse](#cosmwasm.wasm.v1.QueryContractHistoryResponse) | ContractHistory gets the contract code history | GET|/cosmwasm/wasm/v1/contract/{address}/history|
 | `ContractsByCode` | [QueryContractsByCodeRequest](#cosmwasm.wasm.v1.QueryContractsByCodeRequest) | [QueryContractsByCodeResponse](#cosmwasm.wasm.v1.QueryContractsByCodeResponse) | ContractsByCode lists all smart contracts for a code id | GET|/cosmwasm/wasm/v1/code/{code_id}/contracts|
 | `AllContractState` | [QueryAllContractStateRequest](#cosmwasm.wasm.v1.QueryAllContractStateRequest) | [QueryAllContractStateResponse](#cosmwasm.wasm.v1.QueryAllContractStateResponse) | AllContractState gets all raw store data for a single contract | GET|/cosmwasm/wasm/v1/contract/{address}/state|
-| `RawContractState` | [QueryRawContractStateRequest](#cosmwasm.wasm.v1.QueryRawContractStateRequest) | [QueryRawContractStateResponse](#cosmwasm.wasm.v1.QueryRawContractStateResponse) | RawContractState gets single key from the raw store data of a contract | GET|/cosmwasm/wasm/v1/contract/{address}/raw/{query_data}|
-| `SmartContractState` | [QuerySmartContractStateRequest](#cosmwasm.wasm.v1.QuerySmartContractStateRequest) | [QuerySmartContractStateResponse](#cosmwasm.wasm.v1.QuerySmartContractStateResponse) | SmartContractState get smart query result from the contract | GET|/cosmwasm/wasm/v1/contract/{address}/smart/{query_data}|
+| `RawContractState` | [QueryRawContractStateRequest](#cosmwasm.wasm.v1.QueryRawContractStateRequest) | [QueryRawContractStateResponse](#cosmwasm.wasm.v1.QueryRawContractStateResponse) | RawContractState gets single key from the raw store data of a contract | GET|/wasm/v1/contract/{address}/raw/{query_data}|
+| `SmartContractState` | [QuerySmartContractStateRequest](#cosmwasm.wasm.v1.QuerySmartContractStateRequest) | [QuerySmartContractStateResponse](#cosmwasm.wasm.v1.QuerySmartContractStateResponse) | SmartContractState get smart query result from the contract | GET|/wasm/v1/contract/{address}/smart/{query_data}|
 | `Code` | [QueryCodeRequest](#cosmwasm.wasm.v1.QueryCodeRequest) | [QueryCodeResponse](#cosmwasm.wasm.v1.QueryCodeResponse) | Code gets the binary code and metadata for a singe wasm code | GET|/cosmwasm/wasm/v1/code/{code_id}|
 | `Codes` | [QueryCodesRequest](#cosmwasm.wasm.v1.QueryCodesRequest) | [QueryCodesResponse](#cosmwasm.wasm.v1.QueryCodesResponse) | Codes gets the metadata for all stored wasm codes | GET|/cosmwasm/wasm/v1/code|
 | `PinnedCodes` | [QueryPinnedCodesRequest](#cosmwasm.wasm.v1.QueryPinnedCodesRequest) | [QueryPinnedCodesResponse](#cosmwasm.wasm.v1.QueryPinnedCodesResponse) | PinnedCodes gets the pinned code ids | GET|/cosmwasm/wasm/v1/codes/pinned|
+
+ <!-- end services -->
+
+
+
+<a name="cosmwasm/wasm/v1/types_2.proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## cosmwasm/wasm/v1/types_2.proto
+
+
+
+<a name="cosmwasm.wasm.v1.BlockGasTracking"></a>
+
+### BlockGasTracking
+Tracking gas consumption for all tx in a particular block
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `tx_tracking_infos` | [TransactionTracking](#cosmwasm.wasm.v1.TransactionTracking) | repeated |  |
+
+
+
+
+
+
+<a name="cosmwasm.wasm.v1.ContractGasTracking"></a>
+
+### ContractGasTracking
+Tracking contract gas usage
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `address` | [string](#string) |  |  |
+| `gas_consumed` | [uint64](#uint64) |  |  |
+| `is_eligible_for_reward` | [bool](#bool) |  |  |
+| `operation` | [ContractOperation](#cosmwasm.wasm.v1.ContractOperation) |  |  |
+
+
+
+
+
+
+<a name="cosmwasm.wasm.v1.ContractInstanceMetadata"></a>
+
+### ContractInstanceMetadata
+Contract instance metadata
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `reward_address` | [string](#string) |  |  |
+| `gas_rebate_to_user` | [bool](#bool) |  |  |
+| `collect_premium` | [bool](#bool) |  | Flag to indicate whether to charge premium or not |
+| `premium_percentage_charged` | [uint64](#uint64) |  | Percentage of gas consumed to be charged. |
+
+
+
+
+
+
+<a name="cosmwasm.wasm.v1.ContractInstantiationRequestWrapper"></a>
+
+### ContractInstantiationRequestWrapper
+Custom wrapper around contract instantiation request
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `reward_address` | [string](#string) |  |  |
+| `gas_rebate_to_user` | [bool](#bool) |  | If set to true, user will get the gas rebate for the contract execution, otherwise developer will get some portion of fee relative to the amount of gas consumed by contract. |
+| `collect_premium` | [bool](#bool) |  | If set to true, developer will receive premium on top of the gas reward. It is a logical error to have both this and `gas_rebate_to_user` set to true. |
+| `premium_percentage_charged` | [uint64](#uint64) |  | Percentage of premium received by developer on top of their original gas reward |
+| `instantiation_request` | [string](#string) |  | The `InitMsg` which will be passed to the contract during initialization call and has to be encoded with Base64. |
+
+
+
+
+
+
+<a name="cosmwasm.wasm.v1.ContractOperationInfo"></a>
+
+### ContractOperationInfo
+Custom Message returned by our wrapper vm
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `gas_consumed` | [uint64](#uint64) |  |  |
+| `operation` | [ContractOperation](#cosmwasm.wasm.v1.ContractOperation) |  |  |
+| `reward_address` | [string](#string) |  | Only set in case of instantiate operation |
+| `gas_rebate_to_end_user` | [bool](#bool) |  | Only set in case of instantiate operation |
+| `collect_premium` | [bool](#bool) |  | Only set in case of instantiate operation |
+| `premium_percentage_charged` | [uint64](#uint64) |  | Only set in case of instantiate operation |
+
+
+
+
+
+
+<a name="cosmwasm.wasm.v1.GasTrackingQueryRequestWrapper"></a>
+
+### GasTrackingQueryRequestWrapper
+Custom wrapper around Query request
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `magic_string` | [string](#string) |  |  |
+| `query_request` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="cosmwasm.wasm.v1.GasTrackingQueryResultWrapper"></a>
+
+### GasTrackingQueryResultWrapper
+Custom wrapper around Query result that also gives gas consumption
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `gas_consumed` | [uint64](#uint64) |  |  |
+| `query_response` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="cosmwasm.wasm.v1.GenesisState"></a>
+
+### GenesisState
+Genesis state
+
+
+
+
+
+
+<a name="cosmwasm.wasm.v1.LeftOverRewardEntry"></a>
+
+### LeftOverRewardEntry
+Reward entry per beneficiary address
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `contract_rewards` | [cosmos.base.v1beta1.DecCoin](#cosmos.base.v1beta1.DecCoin) | repeated |  |
+
+
+
+
+
+
+<a name="cosmwasm.wasm.v1.RewardDistributionEvent"></a>
+
+### RewardDistributionEvent
+Event emitted when Reward is allocated
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `reward_address` | [string](#string) |  |  |
+| `contract_rewards` | [cosmos.base.v1beta1.Coin](#cosmos.base.v1beta1.Coin) | repeated |  |
+| `leftover_rewards` | [cosmos.base.v1beta1.DecCoin](#cosmos.base.v1beta1.DecCoin) | repeated |  |
+
+
+
+
+
+
+<a name="cosmwasm.wasm.v1.TransactionTracking"></a>
+
+### TransactionTracking
+Tracking contract gas usage and total gas consumption per transaction
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `max_gas_allowed` | [uint64](#uint64) |  |  |
+| `max_contract_rewards` | [cosmos.base.v1beta1.DecCoin](#cosmos.base.v1beta1.DecCoin) | repeated |  |
+| `contract_tracking_infos` | [ContractGasTracking](#cosmwasm.wasm.v1.ContractGasTracking) | repeated |  |
+
+
+
+
+
+ <!-- end messages -->
+
+
+<a name="cosmwasm.wasm.v1.ContractOperation"></a>
+
+### ContractOperation
+Denotes which operation consumed this gas
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| CONTRACT_OPERATION_UNSPECIFIED | 0 | Invalid or unknown operation |
+| CONTRACT_OPERATION_INSTANTIATION | 1 | Initialization of the contract |
+| CONTRACT_OPERATION_EXECUTION | 2 | Execution of the contract |
+| CONTRACT_OPERATION_QUERY | 3 | Querying the contract |
+| CONTRACT_OPERATION_MIGRATE | 4 | Migrating the contract |
+| CONTRACT_OPERATION_IBC | 5 | IBC operation |
+| CONTRACT_OPERATION_SUDO | 6 | Sudo operation |
+| CONTRACT_OPERATION_REPLY | 7 | Reply operation |
+
+
+ <!-- end enums -->
+
+ <!-- end HasExtensions -->
 
  <!-- end services -->
 

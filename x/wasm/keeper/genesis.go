@@ -18,7 +18,7 @@ type ValidatorSetSource interface {
 // CONTRACT: all types of accounts must have been already initialized/created
 func InitGenesis(ctx sdk.Context, keeper *Keeper, data types.GenesisState, stakingKeeper ValidatorSetSource, msgHandler sdk.Handler) ([]abci.ValidatorUpdate, error) {
 	contractKeeper := NewGovPermissionKeeper(keeper)
-	keeper.SetParams(ctx, data.Params)
+	keeper.setParams(ctx, data.Params)
 	var maxCodeID uint64
 	for i, code := range data.Codes {
 		err := keeper.importCode(ctx, code.CodeID, code.CodeInfo, code.CodeBytes)
@@ -102,11 +102,15 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) *types.GenesisState {
 	})
 
 	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, contract types.ContractInfo) bool {
+		contractStateIterator := keeper.GetContractState(ctx, addr)
 		var state []types.Model
-		keeper.IterateContractState(ctx, addr, func(key, value []byte) bool {
-			state = append(state, types.Model{Key: key, Value: value})
-			return false
-		})
+		for ; contractStateIterator.Valid(); contractStateIterator.Next() {
+			m := types.Model{
+				Key:   contractStateIterator.Key(),
+				Value: contractStateIterator.Value(),
+			}
+			state = append(state, m)
+		}
 		// redact contract info
 		contract.Created = nil
 		genState.Contracts = append(genState.Contracts, types.Contract{
@@ -114,6 +118,7 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) *types.GenesisState {
 			ContractInfo:    contract,
 			ContractState:   state,
 		})
+
 		return false
 	})
 

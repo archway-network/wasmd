@@ -107,7 +107,7 @@ const appName = "WasmApp"
 
 // We pull these out so we can set them with LDFLAGS in the Makefile
 var (
-	NodeDir      = ".wasmd"
+	NodeDir      = ".archwayd"
 	Bech32Prefix = "wasm"
 
 	// If EnabledSpecificProposals is "", and this is "true", then enable all x/wasm proposals.
@@ -120,7 +120,7 @@ var (
 )
 
 // GetEnabledProposals parses the ProposalsEnabled / EnableSpecificProposals values to
-// produce a list of enabled proposals to pass into wasmd app.
+// produce a list of enabled proposals to pass into archwayd app.
 func GetEnabledProposals() []wasm.ProposalType {
 	if EnableSpecificProposals == "" {
 		if ProposalsEnabled == "true" {
@@ -140,7 +140,7 @@ func GetEnabledProposals() []wasm.ProposalType {
 // These are the ones we will want to use in the code, based on
 // any overrides above
 var (
-	// DefaultNodeHome default home directories for wasmd
+	// DefaultNodeHome default home directories for archwayd
 	DefaultNodeHome = os.ExpandEnv("$HOME/") + NodeDir
 
 	// Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -195,7 +195,6 @@ var (
 
 	// module account permissions
 	maccPerms = map[string][]string{
-		gastracker.ContractRewardCollector: nil,
 		authtypes.FeeCollectorName:     nil,
 		distrtypes.ModuleName:          nil,
 		minttypes.ModuleName:           {authtypes.Minter},
@@ -411,8 +410,6 @@ func NewWasmApp(
 		scopedIBCKeeper,
 	)
 
-	app.gastrackingKeeper = gastracker.NewGasTrackingKeeper(keys[gastracker.StoreKey])
-
 	// register the proposal types
 	govRouter := govtypes.NewRouter()
 	govRouter.
@@ -453,24 +450,6 @@ func NewWasmApp(
 	if err != nil {
 		panic(fmt.Sprintf("error while reading wasm config: %s", err))
 	}
-
-	// Declare custom vm and messenger which allow us to track gas
-	supportedFeatures := "staking,stargate,iterator"
-	defaultGasRegister := keeper.NewDefaultWasmGasRegister()
-	wasmer, err := wasmvm.NewVM(filepath.Join(wasmDir, "wasm"), supportedFeatures, 32, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
-	if err != nil {
-		panic(err)
-	}
-	gasTrackingVm := gastracker.NewGasTrackingWasmEngine(wasmer, defaultGasRegister)
-	messenger := gastracker.NewGasTrackingMessageHandler(app.Router(), app.ibcKeeper.ChannelKeeper, scopedWasmKeeper, app.bankKeeper, appCodec, app.transferKeeper, app.gastrackingKeeper)
-
-	wasmOpts = append(
-		wasmOpts,
-		keeper.WithGasRegister(defaultGasRegister),
-		keeper.WithWasmEngine(gasTrackingVm),
-		keeper.WithMessageHandler(messenger),
-		keeper.WithQueryPlugins(&keeper.QueryPlugins{Wasm: gastracker.NewGasTrackingWASMQueryPlugin(app.gastrackingKeeper, &app.wasmKeeper)}),
-	)
 
 	// The last arguments can contain custom message handlers, and custom query handlers,
 	// if we want to allow any custom callbacks
@@ -542,7 +521,6 @@ func NewWasmApp(
 		authzmodule.NewAppModule(appCodec, app.AuthzKeeper, app.accountKeeper, app.bankKeeper, app.interfaceRegistry),
 		ibc.NewAppModule(app.ibcKeeper),
 		params.NewAppModule(app.paramsKeeper),
-		gastracker.NewAppModule(app.gastrackingKeeper, app.bankKeeper, app.mintKeeper),
 		transferModule,
 		crisis.NewAppModule(&app.crisisKeeper, skipGenesisInvariants), // always be last to make sure that it checks for all invariants and not only part of them
 	)
@@ -567,29 +545,6 @@ func NewWasmApp(
 		authz.ModuleName,
 		feegrant.ModuleName,
 		paramstypes.ModuleName,
-		vestingtypes.ModuleName,
-		// additional non simd modules
-		ibchost.ModuleName,
-		ibctransfertypes.ModuleName,
-		wasm.ModuleName,
-	)
-
-	app.mm.SetOrderEndBlockers(
-		crisistypes.ModuleName,
-		govtypes.ModuleName,
-		stakingtypes.ModuleName,
-		capabilitytypes.ModuleName,
-		authtypes.ModuleName,
-		banktypes.ModuleName,
-		distrtypes.ModuleName,
-		slashingtypes.ModuleName,
-		minttypes.ModuleName,
-		genutiltypes.ModuleName,
-		evidencetypes.ModuleName,
-		authz.ModuleName,
-		feegrant.ModuleName,
-		paramstypes.ModuleName,
-		upgradetypes.ModuleName,
 		vestingtypes.ModuleName,
 		// additional non simd modules
 		ibchost.ModuleName,

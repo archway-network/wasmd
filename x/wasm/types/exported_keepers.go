@@ -15,7 +15,7 @@ type ViewKeeper interface {
 	GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *ContractInfo
 	IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, ContractInfo) bool)
 	IterateContractsByCode(ctx sdk.Context, codeID uint64, cb func(address sdk.AccAddress) bool)
-	IterateContractState(ctx sdk.Context, contractAddress sdk.AccAddress, cb func(key, value []byte) bool)
+	GetContractState(ctx sdk.Context, contractAddress sdk.AccAddress) sdk.Iterator
 	GetCodeInfo(ctx sdk.Context, codeID uint64) *CodeInfo
 	IterateCodeInfos(ctx sdk.Context, cb func(uint64, CodeInfo) bool)
 	GetByteCode(ctx sdk.Context, codeID uint64) ([]byte, error)
@@ -35,9 +35,6 @@ type ContractOpsKeeper interface {
 
 	// Migrate allows to upgrade a contract to a new code with data migration.
 	Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte) ([]byte, error)
-
-	// Sudo allows to call privileged entry point of a contract.
-	Sudo(ctx sdk.Context, contractAddress sdk.AccAddress, msg []byte) ([]byte, error)
 
 	// UpdateContractAdmin sets the admin value on the ContractInfo. It must be a valid address (use ClearContractAdmin to remove it)
 	UpdateContractAdmin(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newAdmin sdk.AccAddress) error

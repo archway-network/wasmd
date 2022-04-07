@@ -625,7 +625,7 @@ func TestConvertWasmCoinToSdkCoin(t *testing.T) {
 	}
 	for name, spec := range specs {
 		t.Run(name, func(t *testing.T) {
-			gotVal, gotErr := ConvertWasmCoinToSdkCoin(spec.src)
+			gotVal, gotErr := convertWasmCoinToSdkCoin(spec.src)
 			if spec.expErr {
 				require.Error(t, gotErr)
 				return

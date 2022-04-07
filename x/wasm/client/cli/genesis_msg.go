@@ -110,11 +110,11 @@ func GenesisInstantiateContractCmd(defaultNodeHome string, genesisMutator Genesi
 				}
 
 				//  does code id exists?
-				codeInfos, err := GetAllCodes(state)
+				codeInfos, err := getAllCodes(state)
 				if err != nil {
 					return err
 				}
-				var codeInfo *CodeMeta
+				var codeInfo *codeMeta
 				for i := range codeInfos {
 					if codeInfos[i].CodeID == msg.CodeID {
 						codeInfo = &codeInfos[i]
@@ -138,7 +138,6 @@ func GenesisInstantiateContractCmd(defaultNodeHome string, genesisMutator Genesi
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract during instantiation")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
 	cmd.Flags().String(flagAdmin, "", "Address of an admin")
-	cmd.Flags().Bool(flagNoAdmin, false, "You must set this explicitly if you don't want an admin")
 	cmd.Flags().String(flagRunAs, "", "The address that pays the init funds. It is the creator of the contract.")
 
 	cmd.Flags().String(flags.FlagHome, defaultNodeHome, "The application home directory")
@@ -209,7 +208,7 @@ func GenesisListCodesCmd(defaultNodeHome string, genReader GenesisReader) *cobra
 			if err != nil {
 				return err
 			}
-			all, err := GetAllCodes(g.WasmModuleState)
+			all, err := getAllCodes(g.WasmModuleState)
 			if err != nil {
 				return err
 			}
@@ -235,7 +234,7 @@ func GenesisListContractsCmd(defaultNodeHome string, genReader GenesisReader) *c
 				return err
 			}
 			state := g.WasmModuleState
-			all := GetAllContracts(state)
+			all := getAllContracts(state)
 			return printJSONOutput(cmd, all)
 		},
 	}
@@ -254,15 +253,15 @@ func printJSONOutput(cmd *cobra.Command, obj interface{}) error {
 	return clientCtx.PrintString(string(bz))
 }
 
-type CodeMeta struct {
+type codeMeta struct {
 	CodeID uint64         `json:"code_id"`
 	Info   types.CodeInfo `json:"info"`
 }
 
-func GetAllCodes(state *types.GenesisState) ([]CodeMeta, error) {
-	all := make([]CodeMeta, len(state.Codes))
+func getAllCodes(state *types.GenesisState) ([]codeMeta, error) {
+	all := make([]codeMeta, len(state.Codes))
 	for i, c := range state.Codes {
-		all[i] = CodeMeta{
+		all[i] = codeMeta{
 			CodeID: c.CodeID,
 			Info:   c.CodeInfo,
 		}
@@ -283,7 +282,7 @@ func GetAllCodes(state *types.GenesisState) ([]CodeMeta, error) {
 				accessConfig = state.Params.InstantiateDefaultPermission.With(creator)
 			}
 			hash := sha256.Sum256(msg.WASMByteCode)
-			all = append(all, CodeMeta{
+			all = append(all, codeMeta{
 				CodeID: seq,
 				Info: types.CodeInfo{
 					CodeHash:          hash[:],
@@ -297,15 +296,15 @@ func GetAllCodes(state *types.GenesisState) ([]CodeMeta, error) {
 	return all, nil
 }
 
-type ContractMeta struct {
+type contractMeta struct {
 	ContractAddress string             `json:"contract_address"`
 	Info            types.ContractInfo `json:"info"`
 }
 
-func GetAllContracts(state *types.GenesisState) []ContractMeta {
-	all := make([]ContractMeta, len(state.Contracts))
+func getAllContracts(state *types.GenesisState) []contractMeta {
+	all := make([]contractMeta, len(state.Contracts))
 	for i, c := range state.Contracts {
-		all[i] = ContractMeta{
+		all[i] = contractMeta{
 			ContractAddress: c.ContractAddress,
 			Info:            c.ContractInfo,
 		}
@@ -314,7 +313,7 @@ func GetAllContracts(state *types.GenesisState) []ContractMeta {
 	seq := contractSeqValue(state)
 	for _, m := range state.GenMsgs {
 		if msg := m.GetInstantiateContract(); msg != nil {
-			all = append(all, ContractMeta{
+			all = append(all, contractMeta{
 				ContractAddress: keeper.BuildContractAddress(msg.CodeID, seq).String(),
 				Info: types.ContractInfo{
 					CodeID:  msg.CodeID,
