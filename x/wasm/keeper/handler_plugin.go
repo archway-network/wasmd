@@ -4,13 +4,15 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/CosmWasm/wasmd/x/wasm/types"
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	channeltypes "github.com/cosmos/cosmos-sdk/x/ibc/core/04-channel/types"
-	host "github.com/cosmos/cosmos-sdk/x/ibc/core/24-host"
+	channeltypes "github.com/cosmos/ibc-go/v2/modules/core/04-channel/types"
+	host "github.com/cosmos/ibc-go/v2/modules/core/24-host"
+
+	"github.com/CosmWasm/wasmd/x/wasm/types"
 )
 
 // msgEncoder is an extension point to customize encodings
@@ -19,14 +21,19 @@ type msgEncoder interface {
 	Encode(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg wasmvmtypes.CosmosMsg) ([]sdk.Msg, error)
 }
 
+// MessageRouter ADR 031 request type routing
+type MessageRouter interface {
+	Handler(msg sdk.Msg) baseapp.MsgServiceHandler
+}
+
 // SDKMessageHandler can handles messages that can be encoded into sdk.Message types and routed.
 type SDKMessageHandler struct {
-	router   sdk.Router
+	router   MessageRouter
 	encoders msgEncoder
 }
 
 func NewDefaultMessageHandler(
-	router sdk.Router,
+	router MessageRouter,
 	channelKeeper types.ChannelKeeper,
 	capabilityKeeper types.CapabilityKeeper,
 	bankKeeper types.Burner,
@@ -45,7 +52,7 @@ func NewDefaultMessageHandler(
 	)
 }
 
-func NewSDKMessageHandler(router sdk.Router, encoders msgEncoder) SDKMessageHandler {
+func NewSDKMessageHandler(router MessageRouter, encoders msgEncoder) SDKMessageHandler {
 	return SDKMessageHandler{
 		router:   router,
 		encoders: encoders,
@@ -86,15 +93,17 @@ func (h SDKMessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Ad
 	}
 
 	// find the handler and execute it
-	handler := h.router.Route(ctx, msg.Route())
-	if handler == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, msg.Route())
+	if handler := h.router.Handler(msg); handler != nil {
+		// ADR 031 request type routing
+		msgResult, err := handler(ctx, msg)
+		return msgResult, err
 	}
-	res, err := handler(ctx, msg)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
+	// legacy sdk.Msg routing
+	// Assuming that the app developer has migrated all their Msgs to
+	// proto messages and has registered all `Msg services`, then this
+	// path should never be called, because all those Msgs should be
+	// registered within the `msgServiceRouter` already.
+	return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "can't route message %+v", msg)
 }
 
 // MessageHandlerChain defines a chain of handlers that are called one by one until it can be handled.
@@ -176,7 +185,7 @@ func (h IBCRawPacketHandler) DispatchMsg(ctx sdk.Context, _ sdk.AccAddress, cont
 		contractIBCChannelID,
 		channelInfo.Counterparty.PortId,
 		channelInfo.Counterparty.ChannelId,
-		convertWasmIBCTimeoutHeightToCosmosHeight(msg.IBC.SendPacket.Timeout.Block),
+		ConvertWasmIBCTimeoutHeightToCosmosHeight(msg.IBC.SendPacket.Timeout.Block),
 		msg.IBC.SendPacket.Timeout.Timestamp,
 	)
 	return nil, nil, h.channelKeeper.SendPacket(ctx, channelCap, packet)
@@ -196,7 +205,7 @@ func (m MessageHandlerFunc) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAdd
 func NewBurnCoinMessageHandler(burner types.Burner) MessageHandlerFunc {
 	return func(ctx sdk.Context, contractAddr sdk.AccAddress, _ string, msg wasmvmtypes.CosmosMsg) (events []sdk.Event, data [][]byte, err error) {
 		if msg.Bank != nil && msg.Bank.Burn != nil {
-			coins, err := convertWasmCoinsToSdkCoins(msg.Bank.Burn.Amount)
+			coins, err := ConvertWasmCoinsToSdkCoins(msg.Bank.Burn.Amount)
 			if err != nil {
 				return nil, nil, err
 			}

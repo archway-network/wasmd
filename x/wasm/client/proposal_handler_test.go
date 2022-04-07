@@ -9,12 +9,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/CosmWasm/wasmd/x/wasm/keeper"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
+
+	"github.com/CosmWasm/wasmd/x/wasm/keeper"
 )
 
 func TestGovRestHandlers(t *testing.T) {
@@ -32,7 +33,7 @@ func TestGovRestHandlers(t *testing.T) {
 	)
 	encodingConfig := keeper.MakeEncodingConfig(t)
 	clientCtx := client.Context{}.
-		WithJSONMarshaler(encodingConfig.Marshaler).
+		WithCodec(encodingConfig.Marshaler).
 		WithTxConfig(encodingConfig.TxConfig).
 		WithLegacyAmino(encodingConfig.Amino).
 		WithInput(os.Stdin).
@@ -172,7 +173,7 @@ func TestGovRestHandlers(t *testing.T) {
 				"title":       "Test Proposal",
 				"description": "My proposal",
 				"type":        "migrate",
-				"contract":    "cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhuc53mp6",
+				"contract":    "cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s4hmalr",
 				"code_id":     "1",
 				"msg":         dict{"foo": "bar"},
 				"run_as":      "cosmos100dejzacpanrldpjjwksjm62shqhyss44jf5xz",
@@ -182,13 +183,83 @@ func TestGovRestHandlers(t *testing.T) {
 			},
 			expCode: http.StatusOK,
 		},
+		"execute contract": {
+			srcPath: "/gov/proposals/wasm_execute",
+			srcBody: dict{
+				"title":       "Test Proposal",
+				"description": "My proposal",
+				"type":        "migrate",
+				"contract":    "cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s4hmalr",
+				"msg":         dict{"foo": "bar"},
+				"run_as":      "cosmos100dejzacpanrldpjjwksjm62shqhyss44jf5xz",
+				"deposit":     []dict{{"denom": "ustake", "amount": "10"}},
+				"proposer":    "cosmos1ve557a5g9yw2g2z57js3pdmcvd5my6g8ze20np",
+				"base_req":    aBaseReq,
+			},
+			expCode: http.StatusOK,
+		},
+		"execute contract fails with no run_as": {
+			srcPath: "/gov/proposals/wasm_execute",
+			srcBody: dict{
+				"title":       "Test Proposal",
+				"description": "My proposal",
+				"type":        "migrate",
+				"contract":    "cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s4hmalr",
+				"msg":         dict{"foo": "bar"},
+				"deposit":     []dict{{"denom": "ustake", "amount": "10"}},
+				"proposer":    "cosmos1ve557a5g9yw2g2z57js3pdmcvd5my6g8ze20np",
+				"base_req":    aBaseReq,
+			},
+			expCode: http.StatusBadRequest,
+		},
+		"execute contract fails with no message": {
+			srcPath: "/gov/proposals/wasm_execute",
+			srcBody: dict{
+				"title":       "Test Proposal",
+				"description": "My proposal",
+				"type":        "migrate",
+				"contract":    "cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s4hmalr",
+				"run_as":      "cosmos100dejzacpanrldpjjwksjm62shqhyss44jf5xz",
+				"deposit":     []dict{{"denom": "ustake", "amount": "10"}},
+				"proposer":    "cosmos1ve557a5g9yw2g2z57js3pdmcvd5my6g8ze20np",
+				"base_req":    aBaseReq,
+			},
+			expCode: http.StatusBadRequest,
+		},
+		"sudo contract": {
+			srcPath: "/gov/proposals/wasm_sudo",
+			srcBody: dict{
+				"title":       "Test Proposal",
+				"description": "My proposal",
+				"type":        "migrate",
+				"contract":    "cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s4hmalr",
+				"msg":         dict{"foo": "bar"},
+				"deposit":     []dict{{"denom": "ustake", "amount": "10"}},
+				"proposer":    "cosmos1ve557a5g9yw2g2z57js3pdmcvd5my6g8ze20np",
+				"base_req":    aBaseReq,
+			},
+			expCode: http.StatusOK,
+		},
+		"sudo contract fails with no message": {
+			srcPath: "/gov/proposals/wasm_sudo",
+			srcBody: dict{
+				"title":       "Test Proposal",
+				"description": "My proposal",
+				"type":        "migrate",
+				"contract":    "cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s4hmalr",
+				"deposit":     []dict{{"denom": "ustake", "amount": "10"}},
+				"proposer":    "cosmos1ve557a5g9yw2g2z57js3pdmcvd5my6g8ze20np",
+				"base_req":    aBaseReq,
+			},
+			expCode: http.StatusBadRequest,
+		},
 		"update contract admin": {
 			srcPath: "/gov/proposals/wasm_update_admin",
 			srcBody: dict{
 				"title":       "Test Proposal",
 				"description": "My proposal",
 				"type":        "migrate",
-				"contract":    "cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhuc53mp6",
+				"contract":    "cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s4hmalr",
 				"new_admin":   "cosmos100dejzacpanrldpjjwksjm62shqhyss44jf5xz",
 				"deposit":     []dict{{"denom": "ustake", "amount": "10"}},
 				"proposer":    "cosmos1ve557a5g9yw2g2z57js3pdmcvd5my6g8ze20np",
@@ -202,7 +273,7 @@ func TestGovRestHandlers(t *testing.T) {
 				"title":       "Test Proposal",
 				"description": "My proposal",
 				"type":        "migrate",
-				"contract":    "cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhuc53mp6",
+				"contract":    "cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s4hmalr",
 				"deposit":     []dict{{"denom": "ustake", "amount": "10"}},
 				"proposer":    "cosmos1ve557a5g9yw2g2z57js3pdmcvd5my6g8ze20np",
 				"base_req":    aBaseReq,

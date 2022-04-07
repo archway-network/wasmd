@@ -2,11 +2,13 @@ package keeper
 
 import (
 	"context"
-	"github.com/CosmWasm/wasmd/x/wasm/types"
+	"testing"
+
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
+
+	"github.com/CosmWasm/wasmd/x/wasm/types"
 )
 
 func TestHasWasmModuleEvent(t *testing.T) {
@@ -181,6 +183,13 @@ func TestNewCustomEvents(t *testing.T) {
 				sdk.NewAttribute("_contract_address", myContract.String()),
 				sdk.NewAttribute("my Key", "myVal"))},
 		},
+		"empty event elements": {
+			src:     make(wasmvmtypes.Events, 10),
+			isError: true,
+		},
+		"nil": {
+			exp: sdk.Events{},
+		},
 	}
 	for name, spec := range specs {
 		t.Run(name, func(t *testing.T) {
@@ -237,6 +246,15 @@ func TestNewWasmModuleEvent(t *testing.T) {
 			exp: sdk.Events{sdk.NewEvent("wasm",
 				sdk.NewAttribute("_contract_address", myContract.String()),
 				sdk.NewAttribute("my-real-key", "some-val"))},
+		},
+		"empty elements": {
+			src:     make([]wasmvmtypes.EventAttribute, 10),
+			isError: true,
+		},
+		"nil": {
+			exp: sdk.Events{sdk.NewEvent("wasm",
+				sdk.NewAttribute("_contract_address", myContract.String()),
+			)},
 		},
 	}
 	for name, spec := range specs {

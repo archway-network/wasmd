@@ -1,3 +1,5 @@
+
+
 # Integration
 
 If you want to use Wasm in your own app, here is how you can get this working
@@ -12,19 +14,26 @@ The pre-requisites of integrating `x/wasm` into your custom app is to be using
 a compatible version of the Cosmos SDK, and to accept some limits to the
 hardware it runs on.
 
-| wasmd | Cosmos SDK |
-|:-----:|:----------:|
-| v0.17 | v0.42.x |
-| v0.16 | v0.42.x |
-| v0.15 | v0.41.x |
-| v0.14 | v0.40.x |
-| v0.13 | v0.40.0-rc3 |
-| v0.12 | v0.40.0-rc3 |
-| v0.11 | v0.39.1 |
-| v0.10 | v0.39.1 |
-| v0.9  | v0.38.3 |
-| v0.8  | v0.38.3 |
-| v0.7  | v0.38.3 |
+| wasmd  | Cosmos SDK  |
+|:------:|:-----------:|
+| v0.24  |   v0.45.0   |
+| v0.23  |   v0.45.0   |
+| v0.22  |   v0.45.0   |
+| v0.21  |   v0.42.x   |
+| v0.20  |   v0.42.x   |
+| v0.19  |   v0.42.x   |
+| v0.18  |   v0.42.x   |
+| v0.17  |   v0.42.x   |
+| v0.16  |   v0.42.x   |
+| v0.15  |   v0.41.x   |
+| v0.14  |   v0.40.x   |
+| v0.13  | v0.40.0-rc3 |
+| v0.12  | v0.40.0-rc3 |
+| v0.11  |   v0.39.1   |
+| v0.10  |   v0.39.1   |
+|  v0.9  |   v0.38.3   |
+|  v0.8  |   v0.38.3   |
+|  v0.7  |   v0.38.3   |
 
 We currently only support Intel/AMD64 CPUs and OSX or Linux. For Linux, the standard build
 commands work for `glibc` systems (Ubuntu, Debian, CentOS, etc). If you wish to compile
@@ -62,6 +71,10 @@ The requirement here is that you have imported the standard sdk modules
 from the Cosmos SDK, and enabled them in `app.go`. If so, you can just look
 at [`wasmd/app/app.go`](https://github.com/CosmWasm/wasmd/blob/master/app/app.go#)
 for how to do so (just search there for lines with `wasm`).
+
+`wasmd` also comes with a custom `ante handler` that adds the TX position in the block into the context
+and passes it to the contracts. In order to support this feature you would need to add our custom
+ante handler into the `ante handler chain` as in: [`app/ante.go`](https://github.com/CosmWasm/wasmd/blob/master/app/ante.go)
 
 ### Copied into your app
 

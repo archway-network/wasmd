@@ -1,6 +1,12 @@
 package types
 
 import (
+	"bytes"
+	"context"
+	"strings"
+	"testing"
+	"time"
+
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
@@ -10,9 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/libs/rand"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestContractInfoValidateBasic(t *testing.T) {
@@ -169,8 +172,8 @@ func TestContractInfoSetExtension(t *testing.T) {
 }
 
 func TestContractInfoMarshalUnmarshal(t *testing.T) {
-	var myAddr sdk.AccAddress = rand.Bytes(sdk.AddrLen)
-	var myOtherAddr sdk.AccAddress = rand.Bytes(sdk.AddrLen)
+	var myAddr sdk.AccAddress = rand.Bytes(ContractAddrLen)
+	var myOtherAddr sdk.AccAddress = rand.Bytes(ContractAddrLen)
 	var anyPos = AbsoluteTxPosition{BlockHeight: 1, TxIndex: 2}
 
 	anyTime := time.Now().UTC()
@@ -195,11 +198,11 @@ func TestContractInfoMarshalUnmarshal(t *testing.T) {
 	govtypes.RegisterInterfaces(interfaceRegistry)
 
 	// when encode
-	bz, err := marshaler.MarshalBinaryBare(&src)
+	bz, err := marshaler.Marshal(&src)
 	require.NoError(t, err)
 	// and decode
 	var dest ContractInfo
-	err = marshaler.UnmarshalBinaryBare(bz, &dest)
+	err = marshaler.Unmarshal(bz, &dest)
 	// then
 	require.NoError(t, err)
 	assert.Equal(t, src, dest)
@@ -290,13 +293,27 @@ func TestContractInfoReadExtension(t *testing.T) {
 func TestNewEnv(t *testing.T) {
 	myTime := time.Unix(0, 1619700924259075000)
 	t.Logf("++ unix: %d", myTime.UnixNano())
-	var myContractAddr sdk.AccAddress = randBytes(sdk.AddrLen)
+	var myContractAddr sdk.AccAddress = randBytes(ContractAddrLen)
 	specs := map[string]struct {
 		srcCtx sdk.Context
 		exp    wasmvmtypes.Env
 	}{
-		"all good": {
-			srcCtx: sdk.Context{}.WithBlockHeight(1).WithBlockTime(myTime).WithChainID("testing"),
+		"all good with tx counter": {
+			srcCtx: WithTXCounter(sdk.Context{}.WithBlockHeight(1).WithBlockTime(myTime).WithChainID("testing").WithContext(context.Background()), 0),
+			exp: wasmvmtypes.Env{
+				Block: wasmvmtypes.BlockInfo{
+					Height:  1,
+					Time:    1619700924259075000,
+					ChainID: "testing",
+				},
+				Contract: wasmvmtypes.ContractInfo{
+					Address: myContractAddr.String(),
+				},
+				Transaction: &wasmvmtypes.TransactionInfo{Index: 0},
+			},
+		},
+		"without tx counter": {
+			srcCtx: sdk.Context{}.WithBlockHeight(1).WithBlockTime(myTime).WithChainID("testing").WithContext(context.Background()),
 			exp: wasmvmtypes.Env{
 				Block: wasmvmtypes.BlockInfo{
 					Height:  1,
@@ -314,5 +331,44 @@ func TestNewEnv(t *testing.T) {
 			assert.Equal(t, spec.exp, NewEnv(spec.srcCtx, myContractAddr))
 		})
 	}
+}
 
+func TestVerifyAddressLen(t *testing.T) {
+	specs := map[string]struct {
+		src    []byte
+		expErr bool
+	}{
+		"valid contract address": {
+			src: bytes.Repeat([]byte{1}, 32),
+		},
+		"valid legacy address": {
+			src: bytes.Repeat([]byte{1}, 20),
+		},
+		"address too short for legacy": {
+			src:    bytes.Repeat([]byte{1}, 19),
+			expErr: true,
+		},
+		"address too short for contract": {
+			src:    bytes.Repeat([]byte{1}, 31),
+			expErr: true,
+		},
+		"address too long for legacy": {
+			src:    bytes.Repeat([]byte{1}, 21),
+			expErr: true,
+		},
+		"address too long for contract": {
+			src:    bytes.Repeat([]byte{1}, 33),
+			expErr: true,
+		},
+	}
+	for name, spec := range specs {
+		t.Run(name, func(t *testing.T) {
+			gotErr := VerifyAddressLen()(spec.src)
+			if spec.expErr {
+				require.Error(t, gotErr)
+				return
+			}
+			require.NoError(t, gotErr)
+		})
+	}
 }

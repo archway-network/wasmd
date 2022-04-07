@@ -1,8 +1,6 @@
 package keeper
 
 import (
-	"fmt"
-
 	wasmvm "github.com/CosmWasm/wasmvm"
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -21,15 +19,15 @@ const (
 var (
 	costHumanize            = DefaultGasCostHumanAddress * DefaultGasMultiplier
 	costCanonical           = DefaultGasCostCanonicalAddress * DefaultGasMultiplier
-	costJsonDeserialization = wasmvmtypes.UFraction{
+	costJSONDeserialization = wasmvmtypes.UFraction{
 		Numerator:   DefaultDeserializationCostPerByte * DefaultGasMultiplier,
 		Denominator: 1,
 	}
 )
 
 func humanAddress(canon []byte) (string, uint64, error) {
-	if len(canon) != sdk.AddrLen {
-		return "", costHumanize, fmt.Errorf("Expected %d byte address", sdk.AddrLen)
+	if err := sdk.VerifyAddressFormat(canon); err != nil {
+		return "", costHumanize, err
 	}
 	return sdk.AccAddress(canon).String(), costHumanize, nil
 }

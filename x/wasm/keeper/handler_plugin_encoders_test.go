@@ -1,25 +1,25 @@
 package keeper
 
 import (
-	"encoding/json"
 	"testing"
 
-	"github.com/CosmWasm/wasmd/x/wasm/keeper/wasmtesting"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	ibctransfertypes "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer/types"
-	clienttypes "github.com/cosmos/cosmos-sdk/x/ibc/core/02-client/types"
-	channeltypes "github.com/cosmos/cosmos-sdk/x/ibc/core/04-channel/types"
+	ibctransfertypes "github.com/cosmos/ibc-go/v2/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v2/modules/core/02-client/types"
+	channeltypes "github.com/cosmos/ibc-go/v2/modules/core/04-channel/types"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/CosmWasm/wasmd/x/wasm/types"
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/require"
+
+	"github.com/CosmWasm/wasmd/x/wasm/keeper/wasmtesting"
+	"github.com/CosmWasm/wasmd/x/wasm/types"
 )
 
 func TestEncoding(t *testing.T) {
@@ -29,12 +29,12 @@ func TestEncoding(t *testing.T) {
 		addr3       = RandomAccountAddress(t)
 		invalidAddr = "xrnd1d02kd90n38qvr3qb9qof83fn2d2"
 	)
-	valAddr := make(sdk.ValAddress, sdk.AddrLen)
+	valAddr := make(sdk.ValAddress, types.SDKAddrLen)
 	valAddr[0] = 12
-	valAddr2 := make(sdk.ValAddress, sdk.AddrLen)
+	valAddr2 := make(sdk.ValAddress, types.SDKAddrLen)
 	valAddr2[1] = 123
 
-	jsonMsg := json.RawMessage(`{"foo": 123}`)
+	jsonMsg := types.RawContractMessage(`{"foo": 123}`)
 
 	bankMsg := &banktypes.MsgSend{
 		FromAddress: addr2.String(),
@@ -625,7 +625,7 @@ func TestConvertWasmCoinToSdkCoin(t *testing.T) {
 	}
 	for name, spec := range specs {
 		t.Run(name, func(t *testing.T) {
-			gotVal, gotErr := convertWasmCoinToSdkCoin(spec.src)
+			gotVal, gotErr := ConvertWasmCoinToSdkCoin(spec.src)
 			if spec.expErr {
 				require.Error(t, gotErr)
 				return

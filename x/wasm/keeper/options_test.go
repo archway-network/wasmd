@@ -1,15 +1,17 @@
 package keeper
 
 import (
-	"github.com/CosmWasm/wasmd/x/wasm/keeper/wasmtesting"
-	"github.com/CosmWasm/wasmd/x/wasm/types"
+	"testing"
+
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	distributionkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
+
+	"github.com/CosmWasm/wasmd/x/wasm/keeper/wasmtesting"
+	"github.com/CosmWasm/wasmd/x/wasm/types"
 )
 
 func TestConstructorOptions(t *testing.T) {
@@ -66,7 +68,7 @@ func TestConstructorOptions(t *testing.T) {
 			},
 		},
 		"api costs": {
-			srcOpt: WithApiCosts(1, 2),
+			srcOpt: WithAPICosts(1, 2),
 			verify: func(t *testing.T, k Keeper) {
 				t.Cleanup(setApiDefaults)
 				assert.Equal(t, uint64(1), costHumanize)

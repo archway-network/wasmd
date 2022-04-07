@@ -1,12 +1,13 @@
 package types
 
 import (
+	"testing"
+
 	"github.com/cosmos/cosmos-sdk/store"
 	"github.com/cosmos/cosmos-sdk/store/iavl"
 	iavl2 "github.com/cosmos/iavl"
 	"github.com/stretchr/testify/require"
 	dbm "github.com/tendermint/tm-db"
-	"testing"
 )
 
 // This is modeled close to
@@ -62,6 +63,7 @@ func TestIavlRangeBounds(t *testing.T) {
 			}
 			items := consume(iter)
 			require.Equal(t, tc.expected, items)
+			iter.Close()
 		})
 	}
 }
@@ -72,8 +74,6 @@ type KV struct {
 }
 
 func consume(itr store.Iterator) []KV {
-	defer itr.Close()
-
 	var res []KV
 	for ; itr.Valid(); itr.Next() {
 		k, v := itr.Key(), itr.Value()

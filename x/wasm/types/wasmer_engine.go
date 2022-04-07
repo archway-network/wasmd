@@ -48,7 +48,7 @@ type WasmerEngine interface {
 	// (That is a detail for the external, sdk-facing, side).
 	//
 	// The caller is responsible for passing the correct `store` (which must have been initialized exactly once),
-	// and setting the env with relevent info on this instance (address, balance, etc)
+	// and setting the env with relevant info on this instance (address, balance, etc)
 	Execute(
 		code wasmvm.Checksum,
 		env wasmvmtypes.Env,
@@ -191,7 +191,7 @@ type WasmerEngine interface {
 		gasMeter wasmvm.GasMeter,
 		gasLimit uint64,
 		deserCost wasmvmtypes.UFraction,
-	) (*wasmvmtypes.IBCReceiveResponse, uint64, error)
+	) (*wasmvmtypes.IBCReceiveResult, uint64, error)
 
 	// IBCPacketAck is available on IBC-enabled contracts and is called when an
 	// the response for an outgoing packet (previously sent by this contract)

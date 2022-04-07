@@ -1,13 +1,14 @@
 package keeper
 
 import (
+	"math"
+	"strings"
+	"testing"
+
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
-	"math"
-	"strings"
-	"testing"
 )
 
 func TestCompileCosts(t *testing.T) {
@@ -20,7 +21,7 @@ func TestCompileCosts(t *testing.T) {
 		"one byte": {
 			srcLen:    1,
 			srcConfig: DefaultGasRegisterConfig(),
-			exp:       sdk.Gas(2), // DefaultCompileCost
+			exp:       sdk.Gas(3), // DefaultCompileCost
 		},
 		"zero byte": {
 			srcLen:    0,
@@ -282,6 +283,26 @@ func TestReplyCost(t *testing.T) {
 			srcConfig: DefaultGasRegisterConfig(),
 			exp:       sdk.Gas(DefaultInstanceCost + 3*DefaultContractMessageDataCost),
 		},
+		"subcall response with empty events": {
+			src: wasmvmtypes.Reply{
+				Result: wasmvmtypes.SubcallResult{
+					Ok: &wasmvmtypes.SubcallResponse{
+						Events: make([]wasmvmtypes.Event, 10),
+					},
+				},
+			},
+			srcConfig: DefaultGasRegisterConfig(),
+			exp:       DefaultInstanceCost,
+		},
+		"subcall response with events unset": {
+			src: wasmvmtypes.Reply{
+				Result: wasmvmtypes.SubcallResult{
+					Ok: &wasmvmtypes.SubcallResponse{},
+				},
+			},
+			srcConfig: DefaultGasRegisterConfig(),
+			exp:       DefaultInstanceCost,
+		},
 	}
 	for name, spec := range specs {
 		t.Run(name, func(t *testing.T) {
@@ -293,6 +314,33 @@ func TestReplyCost(t *testing.T) {
 			}
 			gotGas := NewWasmGasRegister(spec.srcConfig).ReplyCosts(spec.pinned, spec.src)
 			assert.Equal(t, spec.exp, gotGas)
+		})
+	}
+}
+
+func TestEventCosts(t *testing.T) {
+	// most cases are covered in TestReplyCost already. This ensures some edge cases
+	specs := map[string]struct {
+		srcAttrs  []wasmvmtypes.EventAttribute
+		srcEvents wasmvmtypes.Events
+		expGas    sdk.Gas
+	}{
+		"empty events": {
+			srcEvents: make([]wasmvmtypes.Event, 1),
+			expGas:    DefaultPerCustomEventCost,
+		},
+		"empty attributes": {
+			srcAttrs: make([]wasmvmtypes.EventAttribute, 1),
+			expGas:   DefaultPerAttributeCost,
+		},
+		"both nil": {
+			expGas: 0,
+		},
+	}
+	for name, spec := range specs {
+		t.Run(name, func(t *testing.T) {
+			gotGas := NewDefaultWasmGasRegister().EventCosts(spec.srcAttrs, spec.srcEvents)
+			assert.Equal(t, spec.expGas, gotGas)
 		})
 	}
 }

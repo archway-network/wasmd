@@ -3,11 +3,12 @@ package keeper
 import (
 	"strings"
 
-	"github.com/CosmWasm/wasmd/x/wasm/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
-	host "github.com/cosmos/cosmos-sdk/x/ibc/core/24-host"
+	host "github.com/cosmos/ibc-go/v2/modules/core/24-host"
+
+	"github.com/CosmWasm/wasmd/x/wasm/types"
 )
 
 // bindIbcPort will reserve the port.
@@ -49,7 +50,7 @@ func (k Keeper) AuthenticateCapability(ctx sdk.Context, cap *capabilitytypes.Cap
 }
 
 // ClaimCapability allows the transfer module to claim a capability
-//that IBC module passes to it
+// that IBC module passes to it
 func (k Keeper) ClaimCapability(ctx sdk.Context, cap *capabilitytypes.Capability, name string) error {
 	return k.capabilityKeeper.ClaimCapability(ctx, cap, name)
 }

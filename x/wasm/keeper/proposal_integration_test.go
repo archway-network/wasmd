@@ -5,23 +5,26 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"github.com/CosmWasm/wasmd/x/wasm/keeper/wasmtesting"
-	wasmvm "github.com/CosmWasm/wasmvm"
 	"io/ioutil"
 	"testing"
 
-	"github.com/CosmWasm/wasmd/x/wasm/types"
+	wasmvm "github.com/CosmWasm/wasmvm"
+
+	"github.com/CosmWasm/wasmd/x/wasm/keeper/wasmtesting"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/CosmWasm/wasmd/x/wasm/types"
 )
 
 func TestStoreCodeProposal(t *testing.T) {
 	ctx, keepers := CreateTestInput(t, false, "staking")
 	govKeeper, wasmKeeper := keepers.GovKeeper, keepers.WasmKeeper
-	wasmKeeper.setParams(ctx, types.Params{
+	wasmKeeper.SetParams(ctx, types.Params{
 		CodeUploadAccess:             types.AllowNobody,
 		InstantiateDefaultPermission: types.AccessTypeNobody,
 		MaxWasmCodeSize:              types.DefaultMaxWasmCodeSize,
@@ -49,6 +52,7 @@ func TestStoreCodeProposal(t *testing.T) {
 	cInfo := wasmKeeper.GetCodeInfo(ctx, 1)
 	require.NotNil(t, cInfo)
 	assert.Equal(t, myActorAddress, cInfo.Creator)
+	assert.True(t, wasmKeeper.IsPinnedCode(ctx, 1))
 
 	storedCode, err := wasmKeeper.GetByteCode(ctx, 1)
 	require.NoError(t, err)
@@ -58,7 +62,7 @@ func TestStoreCodeProposal(t *testing.T) {
 func TestInstantiateProposal(t *testing.T) {
 	ctx, keepers := CreateTestInput(t, false, "staking")
 	govKeeper, wasmKeeper := keepers.GovKeeper, keepers.WasmKeeper
-	wasmKeeper.setParams(ctx, types.Params{
+	wasmKeeper.SetParams(ctx, types.Params{
 		CodeUploadAccess:             types.AllowNobody,
 		InstantiateDefaultPermission: types.AccessTypeNobody,
 		MaxWasmCodeSize:              types.DefaultMaxWasmCodeSize,
@@ -73,8 +77,8 @@ func TestInstantiateProposal(t *testing.T) {
 	)
 
 	var (
-		oneAddress   sdk.AccAddress = bytes.Repeat([]byte{0x1}, sdk.AddrLen)
-		otherAddress sdk.AccAddress = bytes.Repeat([]byte{0x2}, sdk.AddrLen)
+		oneAddress   sdk.AccAddress = bytes.Repeat([]byte{0x1}, types.ContractAddrLen)
+		otherAddress sdk.AccAddress = bytes.Repeat([]byte{0x2}, types.ContractAddrLen)
 	)
 	src := types.InstantiateContractProposalFixture(func(p *types.InstantiateContractProposal) {
 		p.CodeID = firstCodeID
@@ -94,7 +98,7 @@ func TestInstantiateProposal(t *testing.T) {
 	require.NoError(t, err)
 
 	// then
-	contractAddr, err := sdk.AccAddressFromBech32("cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhuc53mp6")
+	contractAddr, err := sdk.AccAddressFromBech32("cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s4hmalr")
 	require.NoError(t, err)
 
 	cInfo := wasmKeeper.GetContractInfo(ctx, contractAddr)
@@ -122,7 +126,7 @@ func TestInstantiateProposal(t *testing.T) {
 func TestMigrateProposal(t *testing.T) {
 	ctx, keepers := CreateTestInput(t, false, "staking")
 	govKeeper, wasmKeeper := keepers.GovKeeper, keepers.WasmKeeper
-	wasmKeeper.setParams(ctx, types.Params{
+	wasmKeeper.SetParams(ctx, types.Params{
 		CodeUploadAccess:             types.AllowNobody,
 		InstantiateDefaultPermission: types.AccessTypeNobody,
 		MaxWasmCodeSize:              types.DefaultMaxWasmCodeSize,
@@ -136,8 +140,8 @@ func TestMigrateProposal(t *testing.T) {
 	require.NoError(t, wasmKeeper.importCode(ctx, 2, codeInfoFixture, wasmCode))
 
 	var (
-		anyAddress   sdk.AccAddress = bytes.Repeat([]byte{0x1}, sdk.AddrLen)
-		otherAddress sdk.AccAddress = bytes.Repeat([]byte{0x2}, sdk.AddrLen)
+		anyAddress   sdk.AccAddress = bytes.Repeat([]byte{0x1}, types.ContractAddrLen)
+		otherAddress sdk.AccAddress = bytes.Repeat([]byte{0x2}, types.ContractAddrLen)
 		contractAddr                = BuildContractAddress(1, 1)
 	)
 
@@ -162,7 +166,6 @@ func TestMigrateProposal(t *testing.T) {
 		CodeID:      2,
 		Contract:    contractAddr.String(),
 		Msg:         migMsgBz,
-		RunAs:       otherAddress.String(),
 	}
 
 	em := sdk.NewEventManager()
@@ -202,9 +205,122 @@ func TestMigrateProposal(t *testing.T) {
 	assert.Equal(t, types.AttributeKeyResultDataHex, string(em.Events()[1].Attributes[0].Key))
 }
 
+func TestExecuteProposal(t *testing.T) {
+	ctx, keepers := CreateTestInput(t, false, "staking")
+	govKeeper, bankKeeper := keepers.GovKeeper, keepers.BankKeeper
+
+	exampleContract := InstantiateHackatomExampleContract(t, ctx, keepers)
+	contractAddr := exampleContract.Contract
+
+	// check balance
+	bal := bankKeeper.GetBalance(ctx, contractAddr, "denom")
+	require.Equal(t, bal.Amount, sdk.NewInt(100))
+
+	releaseMsg := struct {
+		Release struct{} `json:"release"`
+	}{}
+	releaseMsgBz, err := json.Marshal(releaseMsg)
+	require.NoError(t, err)
+
+	// try with runAs that doesn't have pemission
+	badSrc := types.ExecuteContractProposal{
+		Title:       "First",
+		Description: "Beneficiary has no permission to run",
+		Contract:    contractAddr.String(),
+		Msg:         releaseMsgBz,
+		RunAs:       exampleContract.BeneficiaryAddr.String(),
+	}
+
+	em := sdk.NewEventManager()
+
+	// fails on store - this doesn't have permission
+	storedProposal, err := govKeeper.SubmitProposal(ctx, &badSrc)
+	require.Error(t, err)
+	// balance should not change
+	bal = bankKeeper.GetBalance(ctx, contractAddr, "denom")
+	require.Equal(t, bal.Amount, sdk.NewInt(100))
+
+	// try again with the proper run-as
+	src := types.ExecuteContractProposal{
+		Title:       "Second",
+		Description: "Verifier can execute",
+		Contract:    contractAddr.String(),
+		Msg:         releaseMsgBz,
+		RunAs:       exampleContract.VerifierAddr.String(),
+	}
+
+	em = sdk.NewEventManager()
+
+	// when stored
+	storedProposal, err = govKeeper.SubmitProposal(ctx, &src)
+	require.NoError(t, err)
+
+	// and proposal execute
+	handler := govKeeper.Router().GetRoute(storedProposal.ProposalRoute())
+	err = handler(ctx.WithEventManager(em), storedProposal.GetContent())
+	require.NoError(t, err)
+
+	// balance should be empty (proper release)
+	bal = bankKeeper.GetBalance(ctx, contractAddr, "denom")
+	require.Equal(t, bal.Amount, sdk.NewInt(0))
+}
+
+func TestSudoProposal(t *testing.T) {
+	ctx, keepers := CreateTestInput(t, false, "staking")
+	govKeeper, bankKeeper := keepers.GovKeeper, keepers.BankKeeper
+
+	exampleContract := InstantiateHackatomExampleContract(t, ctx, keepers)
+	contractAddr := exampleContract.Contract
+	_, _, anyAddr := keyPubAddr()
+
+	// check balance
+	bal := bankKeeper.GetBalance(ctx, contractAddr, "denom")
+	require.Equal(t, bal.Amount, sdk.NewInt(100))
+	bal = bankKeeper.GetBalance(ctx, anyAddr, "denom")
+	require.Equal(t, bal.Amount, sdk.NewInt(0))
+
+	type StealMsg struct {
+		Recipient string     `json:"recipient"`
+		Amount    []sdk.Coin `json:"amount"`
+	}
+	stealMsg := struct {
+		Steal StealMsg `json:"steal_funds"`
+	}{Steal: StealMsg{
+		Recipient: anyAddr.String(),
+		Amount:    []sdk.Coin{sdk.NewInt64Coin("denom", 75)},
+	}}
+	stealMsgBz, err := json.Marshal(stealMsg)
+	require.NoError(t, err)
+
+	// sudo can do anything
+	src := types.SudoContractProposal{
+		Title:       "Sudo",
+		Description: "Steal funds for the verifier",
+		Contract:    contractAddr.String(),
+		Msg:         stealMsgBz,
+	}
+
+	em := sdk.NewEventManager()
+
+	// when stored
+	storedProposal, err := govKeeper.SubmitProposal(ctx, &src)
+	require.NoError(t, err)
+
+	// and proposal execute
+	handler := govKeeper.Router().GetRoute(storedProposal.ProposalRoute())
+	err = handler(ctx.WithEventManager(em), storedProposal.GetContent())
+	require.NoError(t, err)
+
+	// balance should be empty (and verifier richer)
+	bal = bankKeeper.GetBalance(ctx, contractAddr, "denom")
+	require.Equal(t, bal.Amount, sdk.NewInt(25))
+	bal = bankKeeper.GetBalance(ctx, anyAddr, "denom")
+	require.Equal(t, bal.Amount, sdk.NewInt(75))
+}
+
 func TestAdminProposals(t *testing.T) {
 	var (
-		otherAddress sdk.AccAddress = bytes.Repeat([]byte{0x2}, sdk.AddrLen)
+		otherAddress sdk.AccAddress = bytes.Repeat([]byte{0x2}, types.ContractAddrLen)
 		contractAddr                = BuildContractAddress(1, 1)
 	)
 	wasmCode, err := ioutil.ReadFile("./testdata/hackatom.wasm")
@@ -262,7 +378,7 @@ func TestAdminProposals(t *testing.T) {
 		t.Run(msg, func(t *testing.T) {
 			ctx, keepers := CreateTestInput(t, false, "staking")
 			govKeeper, wasmKeeper := keepers.GovKeeper, keepers.WasmKeeper
-			wasmKeeper.setParams(ctx, types.Params{
+			wasmKeeper.SetParams(ctx, types.Params{
 				CodeUploadAccess:             types.AllowNobody,
 				InstantiateDefaultPermission: types.AccessTypeNobody,
 				MaxWasmCodeSize:              types.DefaultMaxWasmCodeSize,
@@ -295,7 +411,7 @@ func TestUpdateParamsProposal(t *testing.T) {
 
 	var (
 		cdc                                   = keepers.WasmKeeper.cdc
-		myAddress              sdk.AccAddress = make([]byte, sdk.AddrLen)
+		myAddress              sdk.AccAddress = make([]byte, types.ContractAddrLen)
 		oneAddressAccessConfig                = types.AccessTypeOnlyAddress.With(myAddress)
 	)
 
@@ -308,7 +424,7 @@ func TestUpdateParamsProposal(t *testing.T) {
 	}{
 		"update upload permission param": {
 			src: proposal.ParamChange{
-				Subspace: types.DefaultParamspace,
+				Subspace: types.ModuleName,
 				Key:      string(types.ParamStoreKeyUploadAccess),
 				Value:    string(cdc.MustMarshalJSON(&types.AllowNobody)),
 			},
@@ -317,7 +433,7 @@ func TestUpdateParamsProposal(t *testing.T) {
 		},
 		"update upload permission param with address": {
 			src: proposal.ParamChange{
-				Subspace: types.DefaultParamspace,
+				Subspace: types.ModuleName,
 				Key:      string(types.ParamStoreKeyUploadAccess),
 				Value:    string(cdc.MustMarshalJSON(&oneAddressAccessConfig)),
 			},
@@ -326,7 +442,7 @@ func TestUpdateParamsProposal(t *testing.T) {
 		},
 		"update instantiate param": {
 			src: proposal.ParamChange{
-				Subspace: types.DefaultParamspace,
+				Subspace: types.ModuleName,
 				Key:      string(types.ParamStoreKeyInstantiateAccess),
 				Value:    string(nobodyJson),
 			},
@@ -336,7 +452,7 @@ func TestUpdateParamsProposal(t *testing.T) {
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			wasmKeeper.setParams(ctx, types.DefaultParams())
+			wasmKeeper.SetParams(ctx, types.DefaultParams())
 
 			proposal := proposal.ParameterChangeProposal{
 				Title:       "Foo",

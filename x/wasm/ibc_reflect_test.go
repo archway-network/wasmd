@@ -1,14 +1,18 @@
 package wasm_test
 
 import (
-	"github.com/CosmWasm/wasmd/x/wasm/ibctesting"
-	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
-	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
-	channeltypes "github.com/cosmos/cosmos-sdk/x/ibc/core/04-channel/types"
-	ibcexported "github.com/cosmos/cosmos-sdk/x/ibc/core/exported"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	channeltypes "github.com/cosmos/ibc-go/v2/modules/core/04-channel/types"
+	ibctesting "github.com/cosmos/ibc-go/v2/testing"
+
+	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
+	"github.com/stretchr/testify/require"
+
+	wasmibctesting "github.com/CosmWasm/wasmd/x/wasm/ibctesting"
+	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 )
 
 func TestIBCReflectContract(t *testing.T) {
@@ -20,9 +24,9 @@ func TestIBCReflectContract(t *testing.T) {
 	//  "ibc_reflect" sends a submessage to "reflect" which is returned as submessage.
 
 	var (
-		coordinator = ibctesting.NewCoordinator(t, 2, nil, nil)
-		chainA      = coordinator.GetChain(ibctesting.GetChainID(0))
-		chainB      = coordinator.GetChain(ibctesting.GetChainID(1))
+		coordinator = wasmibctesting.NewCoordinator(t, 2)
+		chainA      = coordinator.GetChain(wasmibctesting.GetChainID(0))
+		chainB      = coordinator.GetChain(wasmibctesting.GetChainID(1))
 	)
 	coordinator.CommitBlock(chainA, chainB)
 
@@ -41,11 +45,24 @@ func TestIBCReflectContract(t *testing.T) {
 		sourcePortID      = chainA.ContractInfo(sendContractAddr).IBCPortID
 		counterpartPortID = chainB.ContractInfo(reflectContractAddr).IBCPortID
 	)
-	clientA, clientB, connA, connB := coordinator.SetupClientConnections(chainA, chainB, ibcexported.Tendermint)
-	connA.NextChannelVersion = "ibc-reflect-v1"
-	connB.NextChannelVersion = "ibc-reflect-v1"
-	// flip instantiation so that we do not run into https://github.com/cosmos/cosmos-sdk/issues/8334
-	channelA, channelB := coordinator.CreateChannel(chainA, chainB, connA, connB, sourcePortID, counterpartPortID, channeltypes.ORDERED)
+	coordinator.CommitBlock(chainA, chainB)
+	coordinator.UpdateTime()
+
+	require.Equal(t, chainA.CurrentHeader.Time, chainB.CurrentHeader.Time)
+	path := wasmibctesting.NewPath(chainA, chainB)
+	path.EndpointA.ChannelConfig = &ibctesting.ChannelConfig{
+		PortID:  sourcePortID,
+		Version: "ibc-reflect-v1",
+		Order:   channeltypes.ORDERED,
+	}
+	path.EndpointB.ChannelConfig = &ibctesting.ChannelConfig{
+		PortID:  counterpartPortID,
+		Version: "ibc-reflect-v1",
+		Order:   channeltypes.ORDERED,
+	}
+
+	coordinator.SetupConnections(path)
+	coordinator.CreateChannels(path)
 
 	// TODO: query both contracts directly to ensure they have registered the proper connection
 	// (and the chainB has created a reflect contract)
@@ -56,7 +73,7 @@ func TestIBCReflectContract(t *testing.T) {
 	// Given the source (portID, channelID), we should be able to count how many packets are pending, query the data
 	// and submit them to the other side (same with acks). This is what the real relayer does. I guess the test framework doesn't?
 
-	// Update: I dug through the code, expecially channel.Keeper.SendPacket, and it only writes a commitment
+	// Update: I dug through the code, especially channel.Keeper.SendPacket, and it only writes a commitment
 	// only writes I see: https://github.com/cosmos/cosmos-sdk/blob/31fdee0228bd6f3e787489c8e4434aabc8facb7d/x/ibc/core/04-channel/keeper/packet.go#L115-L116
 	// commitment is hashed packet: https://github.com/cosmos/cosmos-sdk/blob/31fdee0228bd6f3e787489c8e4434aabc8facb7d/x/ibc/core/04-channel/types/packet.go#L14-L34
 	// how is the relayer supposed to get the original packet data??
@@ -67,13 +84,13 @@ func TestIBCReflectContract(t *testing.T) {
 	// ensure the expected packet was prepared, and relay it
 	require.Equal(t, 1, len(chainA.PendingSendPackets))
 	require.Equal(t, 0, len(chainB.PendingSendPackets))
-	err := coordinator.RelayAndAckPendingPackets(chainA, chainB, clientA, clientB)
+	err := coordinator.RelayAndAckPendingPackets(path)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(chainA.PendingSendPackets))
 	require.Equal(t, 0, len(chainB.PendingSendPackets))
 
 	// let's query the source contract and make sure it registered an address
-	query := ReflectSendQueryMsg{Account: &AccountQuery{ChannelID: channelA.ID}}
+	query := ReflectSendQueryMsg{Account: &AccountQuery{ChannelID: path.EndpointA.ChannelID}}
 	var account AccountResponse
 	err = chainA.SmartQuery(sendContractAddr.String(), query, &account)
 	require.NoError(t, err)
@@ -81,15 +98,13 @@ func TestIBCReflectContract(t *testing.T) {
 	require.Empty(t, account.RemoteBalance)
 
 	// close channel
-	coordinator.CloseChannel(chainA, chainB, channelA, channelB)
+	coordinator.CloseChannel(path)
 
 	// let's query the source contract and make sure it registered an address
 	account = AccountResponse{}
 	err = chainA.SmartQuery(sendContractAddr.String(), query, &account)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
-
-	_ = clientB
 }
 
 type ReflectSendQueryMsg struct {
