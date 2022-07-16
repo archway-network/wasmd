@@ -35,7 +35,7 @@ func (k Keeper) OnOpenChannel(
 	querier := k.newQueryHandler(ctx, contractAddr)
 
 	gas := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.IBCChannelOpen(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, costJSONDeserialization)
+	res, gasUsed, execErr := k.wasmVM.IBCChannelOpen(ctx, codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, &querier, ctx.GasMeter(), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return "", sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
