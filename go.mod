@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/CosmWasm/wasmvm v1.0.0-beta10
 	github.com/cosmos/cosmos-sdk v0.45.1
-	github.com/cosmos/iavl v0.17.3
+	github.com/cosmos/iavl v0.19.0
 	github.com/cosmos/ibc-go/v2 v2.2.0
 	github.com/dvsekhvalnov/jose2go v0.0.0-20200901110807-248326c1351b
 	github.com/gogo/protobuf v1.3.3
@@ -19,15 +19,15 @@ require (
 	github.com/regen-network/cosmos-proto v0.3.1
 	github.com/snikch/goodman v0.0.0-20171125024755-10e37e294daa
 	github.com/spf13/cast v1.4.1
-	github.com/spf13/cobra v1.3.0
+	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.8.0
 	github.com/syndtr/goleveldb v1.0.1-0.20200815110645-5c35d600f0ca
-	github.com/tendermint/tendermint v0.34.16
+	github.com/tendermint/tendermint v0.34.19
 	github.com/tendermint/tm-db v0.6.7
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa
-	google.golang.org/grpc v1.44.0
+	google.golang.org/grpc v1.45.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -109,14 +109,14 @@ require (
 	github.com/tendermint/go-amino v0.16.0 // indirect
 	github.com/zondax/hid v0.9.0 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
-	golang.org/x/crypto v0.0.0-20210915214749-c084706c2272 // indirect
-	golang.org/x/net v0.0.0-20211208012354-db4efeb81f4b // indirect
-	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
-	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect
+	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e // indirect
+	golang.org/x/net v0.0.0-20220617184016-355a448f1bc9 // indirect
+	golang.org/x/sys v0.0.0-20220615213510-4f61da869c0c // indirect
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/protobuf v1.27.1 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	nhooyr.io/websocket v1.8.6 // indirect
 )
 
