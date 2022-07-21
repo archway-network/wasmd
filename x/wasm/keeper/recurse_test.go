@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/CosmWasm/wasmd/x/wasm/types"
@@ -307,7 +308,9 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 				require.NoError(t, err)
 			}
 			if types.EnableGasVerification {
-				assert.Equal(t, tc.expectedGas, ctx.GasMeter().GasConsumed())
+				fmt.Println(tc.expectedGas)
+				fmt.Println(ctx.GasMeter().GasConsumed())
+				assert.Equal(t, tc.expectedGas, ctx.GasMeter().GasConsumed()) // likely because tracking ?
 			}
 			assert.Equal(t, tc.expectQueriesFromContract, totalWasmQueryCounter)
 		})
