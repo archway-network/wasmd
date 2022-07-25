@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+
 	wasmvm "github.com/CosmWasm/wasmvm"
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
 	"github.com/cosmos/cosmos-sdk/store/gaskv"
@@ -152,7 +153,7 @@ type BareWasmVM interface {
 		gasMeter wasmvm.GasMeter,
 		gasLimit uint64,
 		deserCost wasmvmtypes.UFraction,
-	) (uint64, error)
+	) (*wasmvmtypes.IBC3ChannelOpenResponse, uint64, error)
 
 	// IBCChannelConnect is available on IBC-enabled contracts and is a hook to call into
 	// during the handshake pahse
@@ -658,32 +659,32 @@ func (t *TrackingWasmerEngine) Cleanup() {
 	t.vm.Cleanup()
 }
 
-func (t *TrackingWasmerEngine) IBCChannelOpen(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, channel wasmvmtypes.IBCChannelOpenMsg, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (uint64, error) {
+func (t *TrackingWasmerEngine) IBCChannelOpen(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, channel wasmvmtypes.IBCChannelOpenMsg, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBC3ChannelOpenResponse, uint64, error) {
 	const CurrentOperation = ContractOperationIbcChannelOpen
 	var contractAddress = env.Contract.Address
 
 	gasCalcFn, err := t.gasProcessor.GetGasCalculationFn(ctx, contractAddress)
 	if err != nil {
-		return 0, &TrackingVMError{GasProcessorError: err, VmError: nil}
+		return nil, 0, &TrackingVMError{GasProcessorError: err, VmError: nil}
 	}
 
 	contractMeter := NewContractGasMeter(gasLimit, gasCalcFn, contractAddress, CurrentOperation)
 
 	err = InitializeGasTracking(querier.GetCtx(), &contractMeter)
 	if err != nil {
-		return 0, &TrackingVMError{GasProcessorError: err, VmError: nil}
+		return nil, 0, &TrackingVMError{GasProcessorError: err, VmError: nil}
 	}
 
 	prefixStore := prefix.NewStore(gaskv.NewStore(store.Store, &contractMeter, stypes.KVGasConfig()), store.PrefixKey)
 
-	vmGasUsed, err := t.vm.IBCChannelOpen(checksum, env, channel, prefixStore, goapi, querier, gasMeter, gasLimit, deserCost)
+	response, vmGasUsed, err := t.vm.IBCChannelOpen(checksum, env, channel, prefixStore, goapi, querier, gasMeter, gasLimit, deserCost)
 
 	updatedGasInfo, trackingErr := t.getActualGas(ctx, CurrentOperation, contractAddress, GasConsumptionInfo{
 		SDKGas: 0,
 		VMGas:  vmGasUsed,
 	})
 	if trackingErr != nil {
-		return 0, &TrackingVMError{VmError: err, GasProcessorError: trackingErr}
+		return response, 0, &TrackingVMError{VmError: err, GasProcessorError: trackingErr}
 	}
 
 	trackingErr = AddVMRecord(*querier.GetCtx(), &VMRecord{
@@ -691,26 +692,26 @@ func (t *TrackingWasmerEngine) IBCChannelOpen(ctx sdk.Context, checksum wasmvm.C
 		ActualVMGas:   updatedGasInfo.VMGas,
 	})
 	if trackingErr != nil {
-		return updatedGasInfo.VMGas, &TrackingVMError{VmError: err, GasProcessorError: trackingErr}
+		return response, updatedGasInfo.VMGas, &TrackingVMError{VmError: err, GasProcessorError: trackingErr}
 	}
 
 	sessionRecords, trackingErr := TerminateGasTracking(querier.GetCtx())
 	if trackingErr != nil {
-		return updatedGasInfo.VMGas, &TrackingVMError{VmError: err, GasProcessorError: trackingErr}
+		return response, updatedGasInfo.VMGas, &TrackingVMError{VmError: err, GasProcessorError: trackingErr}
 	}
 
 	if err != nil && trackingErr == nil {
-		return updatedGasInfo.VMGas, err
+		return response, updatedGasInfo.VMGas, err
 	} else if trackingErr != nil {
-		return updatedGasInfo.VMGas, &TrackingVMError{VmError: err, GasProcessorError: trackingErr}
+		return response, updatedGasInfo.VMGas, &TrackingVMError{VmError: err, GasProcessorError: trackingErr}
 	}
 
 	ingestingErr := t.ingestGasRecords(ctx, sessionRecords)
 
 	if ingestingErr != nil {
-		return updatedGasInfo.VMGas, &TrackingVMError{VmError: err, GasProcessorError: ingestingErr}
+		return response, updatedGasInfo.VMGas, &TrackingVMError{VmError: err, GasProcessorError: ingestingErr}
 	} else {
-		return updatedGasInfo.VMGas, nil
+		return response, updatedGasInfo.VMGas, nil
 	}
 }
 
