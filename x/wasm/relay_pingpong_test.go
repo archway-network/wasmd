@@ -3,6 +3,7 @@ package wasm_test
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/store"
 	"testing"
 
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
@@ -151,14 +152,16 @@ func (p *player) Execute(code wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmt
 		return nil, 0, err
 	}
 
+	prefixStore := prefix.NewStore(store.Store, store.PrefixKey)
+
 	if start.MaxValue != 0 {
-		store.Store.Set(maxValueKey, sdk.Uint64ToBigEndian(start.MaxValue))
+		prefixStore.Set(maxValueKey, sdk.Uint64ToBigEndian(start.MaxValue))
 	}
 	service := NewHit(p.actor, start.Value)
 	p.t.Logf("[%s] starting game with: %d: %v\n", p.actor, start.Value, service)
 
-	p.incrementCounter(sentBallsCountKey, store)
-	store.Store.Set(lastBallSentKey, sdk.Uint64ToBigEndian(start.Value))
+	p.incrementCounter(sentBallsCountKey, prefixStore)
+	prefixStore.Set(lastBallSentKey, sdk.Uint64ToBigEndian(start.Value))
 	return &wasmvmtypes.Response{
 		Messages: []wasmvmtypes.SubMsg{
 			{
@@ -255,19 +258,22 @@ func (p player) IBCPacketReceive(codeID wasmvm.Checksum, env wasmvmtypes.Env, ms
 			// no hit msg, we stop the game
 		}, 0, nil
 	}
-	p.incrementCounter(receivedBallsCountKey, store)
+
+	prefixStore := prefix.NewStore(store.Store, store.PrefixKey)
+
+	p.incrementCounter(receivedBallsCountKey, prefixStore)
 
 	otherCount := receivedBall[counterParty(p.actor)]
-	store.Store.Set(lastBallReceivedKey, sdk.Uint64ToBigEndian(otherCount))
+	prefixStore.Set(lastBallReceivedKey, sdk.Uint64ToBigEndian(otherCount))
 
-	if maxVal := store.Store.Get(maxValueKey); maxVal != nil && otherCount > sdk.BigEndianToUint64(maxVal) {
+	if maxVal := prefixStore.Get(maxValueKey); maxVal != nil && otherCount > sdk.BigEndianToUint64(maxVal) {
 		errMsg := fmt.Sprintf("max value exceeded: %d got %d", sdk.BigEndianToUint64(maxVal), otherCount)
 		return &wasmvmtypes.IBCReceiveResult{Ok: &wasmvmtypes.IBCReceiveResponse{
 			Acknowledgement: receivedBall.BuildError(errMsg).GetBytes(),
 		}}, 0, nil
 	}
 
-	nextValue := p.incrementCounter(lastBallSentKey, store)
+	nextValue := p.incrementCounter(lastBallSentKey, prefixStore)
 	newHit := NewHit(p.actor, nextValue)
 	respHit := &wasmvmtypes.IBCMsg{SendPacket: &wasmvmtypes.SendPacketMsg{
 		ChannelID: packet.Src.ChannelID,
@@ -277,7 +283,7 @@ func (p player) IBCPacketReceive(codeID wasmvm.Checksum, env wasmvmtypes.Env, ms
 			Height:   doNotTimeout.RevisionHeight,
 		}},
 	}}
-	p.incrementCounter(sentBallsCountKey, store)
+	p.incrementCounter(sentBallsCountKey, prefixStore)
 	p.t.Logf("[%s] received %d, returning %d: %v\n", p.actor, otherCount, nextValue, newHit)
 
 	return &wasmvmtypes.IBCReceiveResult{
@@ -296,6 +302,8 @@ func (p player) IBCPacketAck(codeID wasmvm.Checksum, env wasmvmtypes.Env, msg wa
 		return nil, 0, err
 	}
 
+	prefixStore := prefix.NewStore(store.Store, store.PrefixKey)
+
 	var ack hitAcknowledgement
 	if err := json.Unmarshal(msg.Acknowledgement.Data, &ack); err != nil {
 		return nil, 0, err
@@ -307,7 +315,7 @@ func (p player) IBCPacketAck(codeID wasmvm.Checksum, env wasmvmtypes.Env, msg wa
 		p.t.Logf("[%s] received app layer error: %s\n", p.actor, ack.Error)
 	}
 
-	p.incrementCounter(confirmedBallsCountKey, store)
+	p.incrementCounter(confirmedBallsCountKey, prefixStore)
 	return &wasmvmtypes.IBCBasicResponse{}, 0, nil
 }
 
@@ -315,14 +323,14 @@ func (p player) IBCPacketTimeout(codeID wasmvm.Checksum, env wasmvmtypes.Env, pa
 	panic("implement me")
 }
 
-func (p player) incrementCounter(key []byte, store types.PrefixStoreInfo) uint64 {
+func (p player) incrementCounter(key []byte, store store.KVStore) uint64 {
 	var count uint64
-	bz := store.Store.Get(key)
+	bz := store.Get(key)
 	if bz != nil {
 		count = sdk.BigEndianToUint64(bz)
 	}
 	count++
-	store.Store.Set(key, sdk.Uint64ToBigEndian(count))
+	store.Set(key, sdk.Uint64ToBigEndian(count))
 	return count
 }
 
