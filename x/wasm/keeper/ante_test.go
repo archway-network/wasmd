@@ -84,8 +84,8 @@ func TestCountTxDecorator(t *testing.T) {
 				_, ok := types.TXCounter(ctx)
 				assert.False(t, ok)
 				require.True(t, simulate)
-				// and not stored
-				assert.False(t, ctx.MultiStore().GetKVStore(keyWasm).Has(types.TXCounterPrefix))
+				// and is stored // NOTE: simulation works different form vanilla wasmd
+				assert.True(t, ctx.MultiStore().GetKVStore(keyWasm).Has(types.TXCounterPrefix))
 				return ctx, nil
 			},
 		},
@@ -111,6 +111,7 @@ func TestCountTxDecorator(t *testing.T) {
 		})
 	}
 }
+
 func TestLimitSimulationGasDecorator(t *testing.T) {
 	var (
 		hundred sdk.Gas = 100
@@ -164,7 +165,8 @@ func TestLimitSimulationGasDecorator(t *testing.T) {
 			ctx := sdk.Context{}.
 				WithGasMeter(sdk.NewInfiniteGasMeter()).
 				WithConsensusParams(&abci.ConsensusParams{
-					Block: &abci.BlockParams{MaxGas: spec.maxBlockGas}})
+					Block: &abci.BlockParams{MaxGas: spec.maxBlockGas},
+				})
 			// when
 			if spec.expErr != nil {
 				require.PanicsWithValue(t, spec.expErr, func() {

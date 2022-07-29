@@ -24,25 +24,28 @@ A VM can support one or more contract-VM interface versions. The interface
 version is communicated by the contract via a Wasm export. This is the current
 compatibility list:
 
-| wasmd | cosmwasm-vm | cosmwasm-std |
-| ----- | ----------- | ------------ |
-| 0.24  | 1.0.0-beta7 | 1.0          |
-| 0.23  | 1.0.0-beta5 | 1.0          |
-| 0.22  | 1.0.0-beta5 | 1.0          |
-| 0.21  | 1.0.0-beta2 | 1.0          |
-| 0.20  | 1.0.0-beta  | 1.0          |
-| 0.19  | 0.16        | 0.16         |
-| 0.18  | 0.16        | 0.16         |
-| 0.17  | 0.14        | 0.14         |
-| 0.16  | 0.14        | 0.14         |
-| 0.15  | 0.13        | 0.11-0.13    |
-| 0.14  | 0.13        | 0.11-0.13    |
-| 0.13  | 0.12        | 0.11-0.13    |
-| 0.12  | 0.12        | 0.11-0.13    |
-| 0.11  | 0.11        | 0.11-0.13    |
-| 0.10  | 0.10        | 0.10         |
-| 0.9   | 0.9         | 0.9          |
-| 0.8   | 0.8         | 0.8          |
+| wasmd | wasmvm       | cosmwasm-vm | cosmwasm-std |
+| ----- | ------------ | ----------- | ------------ |
+| 0.27  | v1.0.0       |             | 1.0          |
+| 0.26  | 1.0.0-beta10 |             | 1.0          |
+| 0.25  | 1.0.0-beta10 |             | 1.0          |
+| 0.24  | 1.0.0-beta7  | 1.0.0-beta6 | 1.0          |
+| 0.23  |              | 1.0.0-beta5 | 1.0          |
+| 0.22  |              | 1.0.0-beta5 | 1.0          |
+| 0.21  |              | 1.0.0-beta2 | 1.0          |
+| 0.20  |              | 1.0.0-beta  | 1.0          |
+| 0.19  |              | 0.16        | 0.16         |
+| 0.18  |              | 0.16        | 0.16         |
+| 0.17  |              | 0.14        | 0.14         |
+| 0.16  |              | 0.14        | 0.14         |
+| 0.15  |              | 0.13        | 0.11-0.13    |
+| 0.14  |              | 0.13        | 0.11-0.13    |
+| 0.13  |              | 0.12        | 0.11-0.13    |
+| 0.12  |              | 0.12        | 0.11-0.13    |
+| 0.11  |              | 0.11        | 0.11-0.13    |
+| 0.10  |              | 0.10        | 0.10         |
+| 0.9   |              | 0.9         | 0.9          |
+| 0.8   |              | 0.8         | 0.8          |
 
 Note: `cosmwasm_std v1.0` means it supports contracts compiled by any `v1.0.0-betaX` or `1.0.x`.
 It will also run contracts compiled with 1.x assuming they don't opt into any newer features.
@@ -104,10 +107,6 @@ make install
 make test
 ```
 if you are using a linux without X or headless linux, look at [this article](https://ahelpme.com/linux/dbusexception-could-not-get-owner-of-name-org-freedesktop-secrets-no-such-name) or [#31](https://github.com/CosmWasm/wasmd/issues/31#issuecomment-577058321).
-
-To set up a single node testnet, [look at the deployment documentation](./docs/deploy-testnet.md).
-
-If you want to deploy a whole cluster, [look at the network scripts](./networks/README.md).
 
 ## Protobuf
 Generate protobuf
@@ -178,10 +177,9 @@ docker run --rm -it -p 26657:26657 -p 26656:26656 -p 1317:1317 \
 
 We provide a number of variables in `app/app.go` that are intended to be set via `-ldflags -X ...`
 compile-time flags. This enables us to avoid copying a new binary directory over for each small change
-to the configuration.
+to the configuration. 
 
 Available flags:
-
  
 * `-X github.com/CosmWasm/wasmd/app.NodeDir=.corald` - set the config/data directory for the node (default `~/.wasmd`)
 * `-X github.com/CosmWasm/wasmd/app.Bech32Prefix=coral` - set the bech32 prefix for all accounts (default `wasm`)
@@ -192,6 +190,17 @@ Available flags:
 Examples:
 
 * [`wasmd`](./Makefile#L50-L55) is a generic, permissionless version using the `cosmos` bech32 prefix
+
+## Compile Time Parameters
+
+Besides those above variables (meant for custom wasmd compilation), there are a few more variables which
+we allow blockchains to customize, but at compile time. If you build your own chain and import `x/wasm`,
+you can adjust a few items via module parameters, but a few others did not fit in that, as they need to be
+used by stateless `ValidateBasic()`. Thus, we made them public `var` and these can be overridden in the `app.go`
+file of your custom chain.
+
+* `wasmtypes.MaxLabelSize = 64` to set the maximum label size on instantiation (default 128)
+* `wasmtypes.MaxWasmSize=777000` to set the max size of compiled wasm to be accepted (default 819200)
 
 ## Genesis Configuration
 We strongly suggest **to limit the max block gas in the genesis** and not use the default value (`-1` for infinite).

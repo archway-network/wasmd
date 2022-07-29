@@ -45,6 +45,7 @@
     - [MsgIBCSend](#cosmwasm.wasm.v1.MsgIBCSend)
   
 - [cosmwasm/wasm/v1/proposal.proto](#cosmwasm/wasm/v1/proposal.proto)
+    - [AccessConfigUpdate](#cosmwasm.wasm.v1.AccessConfigUpdate)
     - [ClearAdminProposal](#cosmwasm.wasm.v1.ClearAdminProposal)
     - [ExecuteContractProposal](#cosmwasm.wasm.v1.ExecuteContractProposal)
     - [InstantiateContractProposal](#cosmwasm.wasm.v1.InstantiateContractProposal)
@@ -54,6 +55,7 @@
     - [SudoContractProposal](#cosmwasm.wasm.v1.SudoContractProposal)
     - [UnpinCodesProposal](#cosmwasm.wasm.v1.UnpinCodesProposal)
     - [UpdateAdminProposal](#cosmwasm.wasm.v1.UpdateAdminProposal)
+    - [UpdateInstantiateConfigProposal](#cosmwasm.wasm.v1.UpdateInstantiateConfigProposal)
   
 - [cosmwasm/wasm/v1/query.proto](#cosmwasm/wasm/v1/query.proto)
     - [CodeInfoResponse](#cosmwasm.wasm.v1.CodeInfoResponse)
@@ -219,7 +221,6 @@ Params defines the set of wasm parameters.
 | ----- | ---- | ----- | ----------- |
 | `code_upload_access` | [AccessConfig](#cosmwasm.wasm.v1.AccessConfig) |  |  |
 | `instantiate_default_permission` | [AccessType](#cosmwasm.wasm.v1.AccessType) |  |  |
-| `max_wasm_code_size` | [uint64](#uint64) |  |  |
 
 
 
@@ -642,6 +643,23 @@ MsgIBCSend
 
 
 
+<a name="cosmwasm.wasm.v1.AccessConfigUpdate"></a>
+
+### AccessConfigUpdate
+AccessConfigUpdate contains the code id and the access config to be
+applied.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `code_id` | [uint64](#uint64) |  | CodeID is the reference to the stored WASM code to be updated |
+| `instantiate_permission` | [AccessConfig](#cosmwasm.wasm.v1.AccessConfig) |  | InstantiatePermission to apply to the set of code ids |
+
+
+
+
+
+
 <a name="cosmwasm.wasm.v1.ClearAdminProposal"></a>
 
 ### ClearAdminProposal
@@ -717,7 +735,7 @@ MigrateContractProposal gov proposal content type to migrate a contract.
 
 Note: skipping 3 as this was previously used for unneeded run_as |
 | `contract` | [string](#string) |  | Contract is the address of the smart contract |
-| `code_id` | [uint64](#uint64) |  | CodeID references the new WASM codesudo |
+| `code_id` | [uint64](#uint64) |  | CodeID references the new WASM code |
 | `msg` | [bytes](#bytes) |  | Msg json encoded message to be passed to the contract on migration |
 
 
@@ -815,6 +833,24 @@ UpdateAdminProposal gov proposal content type to set an admin for a contract.
 
 
 
+
+<a name="cosmwasm.wasm.v1.UpdateInstantiateConfigProposal"></a>
+
+### UpdateInstantiateConfigProposal
+UpdateInstantiateConfigProposal gov proposal content type to update
+instantiate config to a  set of code ids.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `title` | [string](#string) |  | Title is a short summary |
+| `description` | [string](#string) |  | Description is a human readable text |
+| `access_config_updates` | [AccessConfigUpdate](#cosmwasm.wasm.v1.AccessConfigUpdate) | repeated | AccessConfigUpdate contains the list of code ids and the access config to be applied. |
+
+
+
+
+
  <!-- end messages -->
 
  <!-- end enums -->
@@ -843,6 +879,7 @@ CodeInfoResponse contains code meta data from CodeInfo
 | `code_id` | [uint64](#uint64) |  | id for legacy support |
 | `creator` | [string](#string) |  |  |
 | `data_hash` | [bytes](#bytes) |  |  |
+| `instantiate_permission` | [AccessConfig](#cosmwasm.wasm.v1.AccessConfig) |  |  |
 
 
 

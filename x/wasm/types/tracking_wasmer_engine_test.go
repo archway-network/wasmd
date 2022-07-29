@@ -2,6 +2,9 @@ package types
 
 import (
 	"fmt"
+	"math/rand"
+	"testing"
+
 	cosmwasm "github.com/CosmWasm/wasmvm"
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
 	"github.com/cosmos/cosmos-sdk/store"
@@ -10,8 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	db "github.com/tendermint/tm-db"
-	"math/rand"
-	"testing"
 )
 
 type testError struct{}
@@ -227,9 +228,9 @@ func (l *loggingVM) Cleanup() {
 	panic("not implemented in test")
 }
 
-func (l *loggingVM) IBCChannelOpen(checksum cosmwasm.Checksum, env wasmvmtypes.Env, channel wasmvmtypes.IBCChannelOpenMsg, store cosmwasm.KVStore, goapi cosmwasm.GoAPI, querier cosmwasm.Querier, gasMeter cosmwasm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (uint64, error) {
+func (l *loggingVM) IBCChannelOpen(checksum cosmwasm.Checksum, env wasmvmtypes.Env, channel wasmvmtypes.IBCChannelOpenMsg, store cosmwasm.KVStore, goapi cosmwasm.GoAPI, querier cosmwasm.Querier, gasMeter cosmwasm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBC3ChannelOpenResponse, uint64, error) {
 	if l.Fail {
-		return 0, errTestFail
+		return nil, 0, errTestFail
 	}
 	if l.ShouldEmulateQuery && len(l.QueryContracts) > 0 {
 		querier.Query(wasmvmtypes.QueryRequest{Wasm: &wasmvmtypes.WasmQuery{Raw: &wasmvmtypes.RawQuery{ContractAddr: l.QueryContracts[0]}}}, uint64(len(l.QueryContracts))-1)
@@ -240,7 +241,7 @@ func (l *loggingVM) IBCChannelOpen(checksum cosmwasm.Checksum, env wasmvmtypes.E
 		MethodName: "IBCChannelOpen",
 		Message:    nil,
 	})
-	return currentOperationGas, nil
+	return &wasmvmtypes.IBC3ChannelOpenResponse{}, currentOperationGas, nil
 }
 
 func (l *loggingVM) IBCChannelConnect(checksum cosmwasm.Checksum, env wasmvmtypes.Env, channel wasmvmtypes.IBCChannelConnectMsg, store cosmwasm.KVStore, goapi cosmwasm.GoAPI, querier cosmwasm.Querier, gasMeter cosmwasm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResponse, uint64, error) {
@@ -893,7 +894,7 @@ func TestGasTrackingVMIBCChannelOpen(t *testing.T) {
 	}
 	testQuerier.Ctx = emptyContext
 
-	gasUsed, err := gasTrackingVm.IBCChannelOpen(
+	_, gasUsed, err := gasTrackingVm.IBCChannelOpen(
 		emptyContext,
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
@@ -932,7 +933,7 @@ func TestGasTrackingVMIBCChannelOpen(t *testing.T) {
 
 	loggingVM.ShouldEmulateQuery = false
 
-	gasUsed, err = gasTrackingVm.IBCChannelOpen(
+	_, gasUsed, err = gasTrackingVm.IBCChannelOpen(
 		emptyContext,
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
