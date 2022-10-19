@@ -37,6 +37,8 @@ COPY --from=go-builder /code/build/wasmd /usr/bin/wasmd
 COPY docker/* /opt/
 RUN chmod +x /opt/*.sh
 
+USER node
+
 WORKDIR /opt
 
 # rest server
@@ -45,5 +47,6 @@ EXPOSE 1317
 EXPOSE 26656
 # tendermint rpc
 EXPOSE 26657
+
 
 CMD ["/usr/bin/wasmd", "version"]
