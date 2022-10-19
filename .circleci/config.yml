@@ -62,7 +62,7 @@ jobs:
 
   lint:
     docker:
-      - image: golangci/golangci-lint:v1.43.0
+      - image: golangci/golangci-lint:v1.46.2
     steps:
       - checkout
       - run:
@@ -115,6 +115,19 @@ jobs:
           command: |
             cd ./benchmarks
             go test -bench .
+
+  simulations:
+    executor: golang
+    parallelism: 1
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Run simulations
+          command: |
+            make test-sim-multi-seed-short
+      - store_artifacts:
+          path: /tmp
 
   upload-coverage:
     executor: golang
@@ -218,3 +231,6 @@ workflows:
       - benchmark:
           requires:
             - test-cover
+      - simulations:
+          requires:
+            - setup-dependencies

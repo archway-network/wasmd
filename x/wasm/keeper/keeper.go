@@ -116,20 +116,20 @@ func NewKeeper(
 	}
 
 	keeper := &Keeper{
-		storeKey:         storeKey,
-		cdc:              cdc,
-		wasmVM:           types.NewTrackingWasmerEngine(wasmer, &types.NoOpContractGasProcessor{}),
-		accountKeeper:    accountKeeper,
-		bank:             NewBankCoinTransferrer(bankKeeper),
-		portKeeper:       portKeeper,
-		capabilityKeeper: capabilityKeeper,
-		messenger:        NewDefaultMessageHandler(router, channelKeeper, capabilityKeeper, bankKeeper, cdc, portSource),
-		queryGasLimit:    wasmConfig.SmartQueryGasLimit,
-		paramSpace:       paramSpace,
-		gasRegister:      NewDefaultWasmGasRegister(),
-    maxQueryStackSize: types.DefaultMaxQueryStackSize,
+		storeKey:          storeKey,
+		cdc:               cdc,
+		wasmVM:            types.NewTrackingWasmerEngine(wasmer, &types.NoOpContractGasProcessor{}),
+		accountKeeper:     accountKeeper,
+		bank:              NewBankCoinTransferrer(bankKeeper),
+		portKeeper:        portKeeper,
+		capabilityKeeper:  capabilityKeeper,
+		messenger:         NewDefaultMessageHandler(router, channelKeeper, capabilityKeeper, bankKeeper, cdc, portSource),
+		queryGasLimit:     wasmConfig.SmartQueryGasLimit,
+		paramSpace:        paramSpace,
+		gasRegister:       NewDefaultWasmGasRegister(),
+		maxQueryStackSize: types.DefaultMaxQueryStackSize,
 	}
-  
+
 	keeper.wasmVMQueryHandler = DefaultQueryPlugins(bankKeeper, stakingKeeper, distKeeper, channelKeeper, queryRouter, keeper)
 	for _, o := range opts {
 		o.apply(keeper)
