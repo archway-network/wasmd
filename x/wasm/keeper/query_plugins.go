@@ -43,6 +43,7 @@ type GRPCQueryRouter interface {
 var _ wasmvmtypes.Querier = QueryHandler{}
 
 func (q QueryHandler) Query(request wasmvmtypes.QueryRequest, gasLimit uint64) (res []byte, err error) {
+
 	// set a limit for a subCtx
 	sdkGas := q.gasRegister.FromWasmVMGas(gasLimit)
 
@@ -200,6 +201,16 @@ func BankQuerier(bankKeeper types.BankViewKeeper) func(ctx sdk.Context, request 
 			}
 			coin := bankKeeper.GetBalance(ctx, addr, request.Balance.Denom)
 			res := wasmvmtypes.BalanceResponse{
+				Amount: wasmvmtypes.Coin{
+					Denom:  coin.Denom,
+					Amount: coin.Amount.String(),
+				},
+			}
+			return json.Marshal(res)
+		}
+		if request.Supply != nil {
+			coin := bankKeeper.GetSupply(ctx, request.Supply.Denom)
+			res := wasmvmtypes.SupplyResponse{
 				Amount: wasmvmtypes.Coin{
 					Denom:  coin.Denom,
 					Amount: coin.Amount.String(),

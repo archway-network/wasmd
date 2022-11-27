@@ -45,7 +45,7 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 			return realWasmQuerier.HandleQuery(ctx, caller, request)
 		})
 	}
-	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, WithQueryHandlerDecorator(countingQuerierDec))
+	ctx, keepers := CreateTestInput(t, false, AvailableCapabilities, WithQueryHandlerDecorator(countingQuerierDec))
 	keeper = keepers.WasmKeeper
 	exampleContract := InstantiateHackatomExampleContract(t, ctx, keepers)
 	return exampleContract.Contract, exampleContract.CreatorAddr, ctx, keeper
@@ -91,7 +91,7 @@ func TestGasCostOnQuery(t *testing.T) {
 				Depth: 1,
 				Work:  50,
 			},
-			expectedGas: 2*GasWork50 + GasReturnHashed,
+			expectedGas: 2*GasWork50 + GasReturnHashed + 1, // +1 for rounding
 		},
 		"recursion 4, some work": {
 			gasLimit: 400_000,
@@ -99,7 +99,7 @@ func TestGasCostOnQuery(t *testing.T) {
 				Depth: 4,
 				Work:  50,
 			},
-			expectedGas: 5*GasWork50 + 4*GasReturnHashed,
+			expectedGas: 5*GasWork50 + 4*GasReturnHashed + 1,
 		},
 	}
 
@@ -268,8 +268,8 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			},
 			expectQueriesFromContract: 10,
 			expectOutOfGas:            false,
-			expectError:               "query wasm contract failed",               // Error we get from the contract instance doing the failing query, not wasmd
-			expectedGas:               10*(GasWork2k+GasReturnHashed) - 264 + 949, // NOTE: investigation on this is required, higher consumption than vanila wasmd, also needs quantification instead of arbitrary
+			expectError:               "query wasm contract failed",                   // Error we get from the contract instance doing the failing query, not wasmd
+			expectedGas:               10*(GasWork2k+GasReturnHashed) - 264 + 949 - 1, // NOTE: investigation on this is required, higher consumption than vanila wasmd, also needs quantification instead of arbitrary
 		},
 	}
 

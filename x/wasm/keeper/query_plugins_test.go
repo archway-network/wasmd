@@ -446,7 +446,7 @@ func TestContractInfoWasmQuerier(t *testing.T) {
 }
 
 func TestQueryErrors(t *testing.T) {
-	ctx, _ := CreateTestInput(t, false, SupportedFeatures)
+	ctx, _ := CreateTestInput(t, false, AvailableCapabilities)
 	initialGasMeter := types.NewContractGasMeter(30000000, func(_ uint64, info types.GasConsumptionInfo) types.GasConsumptionInfo {
 		return types.GasConsumptionInfo{
 			SDKGas: info.SDKGas * 2,
@@ -522,8 +522,16 @@ func (m mockWasmQueryKeeper) IsPinnedCode(ctx sdk.Context, codeID uint64) bool {
 }
 
 type bankKeeperMock struct {
+	GetSupplyFn      func(ctx sdk.Context, denom string) sdk.Coin
 	GetBalanceFn     func(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin
 	GetAllBalancesFn func(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
+}
+
+func (m bankKeeperMock) GetSupply(ctx sdk.Context, denom string) sdk.Coin {
+	if m.GetSupplyFn == nil {
+		panic("not expected to be called")
+	}
+	return m.GetSupplyFn(ctx, denom)
 }
 
 func (m bankKeeperMock) GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin {
