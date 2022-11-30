@@ -94,8 +94,17 @@ func TestDispatchSubMsgSuccessCase(t *testing.T) {
 	require.NotNil(t, res.Result.Ok)
 	sub := res.Result.Ok
 	assert.Empty(t, sub.Data)
-	// as of v0.28.0 we strip out all events that don't come from wasm contracts. can't trust the sdk.
-	require.Len(t, sub.Events, 0)
+	// NOTE: Archway does not follow this trend
+	// NOTE: as of v0.28.0 confio strips out all events that don't come from wasm contracts. can't trust the sdk.
+	require.Len(t, sub.Events, 3)
+	assert.Equal(t, "coin_spent", sub.Events[0].Type)
+	assert.Equal(t, "coin_received", sub.Events[1].Type)
+	transfer := sub.Events[2]
+	assert.Equal(t, "transfer", transfer.Type)
+	assert.Equal(t, wasmvmtypes.EventAttribute{
+		Key:   "recipient",
+		Value: fred.String(),
+	}, transfer.Attributes[1])
 }
 
 func TestDispatchSubMsgErrorHandling(t *testing.T) {
@@ -187,7 +196,7 @@ func TestDispatchSubMsgErrorHandling(t *testing.T) {
 
 	assertReturnedEvents := func(expectedEvents int) assertion {
 		return func(t *testing.T, ctx sdk.Context, contract, emptyAccount string, response wasmvmtypes.SubMsgResult) {
-			require.Len(t, response.Ok.Events, expectedEvents)
+			require.Lenf(t, response.Ok.Events, expectedEvents, "Expected: %d\n Response: %d\n", expectedEvents, response.Ok.Events)
 		}
 	}
 
@@ -236,7 +245,7 @@ func TestDispatchSubMsgErrorHandling(t *testing.T) {
 		"send tokens": {
 			submsgID:         5,
 			msg:              validBankSend,
-			resultAssertions: []assertion{assertReturnedEvents(0), assertGasUsed(95000, 96000)},
+			resultAssertions: []assertion{assertReturnedEvents(3), assertGasUsed(112000, 113000)},
 		},
 		"not enough tokens": {
 			submsgID:    6,
@@ -256,7 +265,7 @@ func TestDispatchSubMsgErrorHandling(t *testing.T) {
 			msg:      validBankSend,
 			gasLimit: &subGasLimit,
 			// uses same gas as call without limit (note we do not charge the 40k on reply)
-			resultAssertions: []assertion{assertReturnedEvents(0), assertGasUsed(95000, 96000)},
+			resultAssertions: []assertion{assertReturnedEvents(3), assertGasUsed(112000, 113000)},
 		},
 		"not enough tokens with limit": {
 			submsgID:    16,

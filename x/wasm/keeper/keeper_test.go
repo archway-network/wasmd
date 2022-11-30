@@ -1386,26 +1386,33 @@ func TestMigrateWithDispatchedMessage(t *testing.T) {
 		{
 			"Type": "coin_spent",
 			"Attr": []dict{
-				{"spender": contractAddr},
 				{"amount": "100000denom"},
+				{"spender": contractAddr},
 			},
 		},
 		{
 			"Type": "coin_received",
 			"Attr": []dict{
-				{"receiver": myPayoutAddr},
 				{"amount": "100000denom"},
+				{"receiver": myPayoutAddr},
 			},
 		},
 		{
 			"Type": "transfer",
 			"Attr": []dict{
+				{"amount": "100000denom"},
 				{"recipient": myPayoutAddr},
 				{"sender": contractAddr},
-				{"amount": "100000denom"},
 			},
 		},
 	}
+
+	//for _, e := range  expEvents {
+	//	attributes := e.Attributes
+	//	sort.SliceStable(attributes, func(i, j int) bool {
+	//		return bytes.Compare(attributes[i].Key, attributes[j].Key) < 0
+	//	})
+	//}
 	expJSONEvts := string(mustMarshal(t, expEvents))
 	assert.JSONEq(t, expJSONEvts, prettyEvents(t, ctx.EventManager().Events()), prettyEvents(t, ctx.EventManager().Events()))
 

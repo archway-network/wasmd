@@ -3,6 +3,7 @@ package keeper
 import (
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/tendermint/tendermint/libs/log"
@@ -298,7 +299,7 @@ func TestDispatchSubmessages(t *testing.T) {
 		},
 		"wasm reply gets proper events": {
 			// put fake wasmmsg in here to show where it comes from
-			msgs: []wasmvmtypes.SubMsg{{ID: 1, ReplyOn: wasmvmtypes.ReplyAlways, Msg: wasmvmtypes.CosmosMsg{Wasm: &wasmvmtypes.WasmMsg{}}}},
+			msgs: []wasmvmtypes.SubMsg{{ID: 1, ReplyOn: wasmvmtypes.ReplyAlways}},
 			replyer: &mockReplyer{
 				replyFn: func(ctx sdk.Context, contractAddress sdk.AccAddress, reply wasmvmtypes.Reply) ([]byte, error) {
 					if reply.Result.Err != "" {
@@ -344,7 +345,7 @@ func TestDispatchSubmessages(t *testing.T) {
 				sdk.NewEvent("wasm-reply"),
 			},
 		},
-		"non-wasm reply events get filtered": {
+		"non-wasm reply events do not get get filtered - Archway(must)": {
 			// show events from a stargate message gets filtered out
 			msgs: []wasmvmtypes.SubMsg{{ID: 1, ReplyOn: wasmvmtypes.ReplyAlways, Msg: wasmvmtypes.CosmosMsg{Stargate: &wasmvmtypes.StargateMsg{}}}},
 			replyer: &mockReplyer{
@@ -356,7 +357,9 @@ func TestDispatchSubmessages(t *testing.T) {
 
 					// ensure the input events are what we expect
 					// I didn't use require.Equal() to act more like a contract... but maybe that would be better
-					if len(res.Events) != 0 {
+					if len(res.Events) != 1 {
+						fmt.Println(len(res.Events))
+						os.Exit(1)
 						return nil, errors.New("events not filtered out")
 					}
 

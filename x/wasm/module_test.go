@@ -309,9 +309,9 @@ func TestHandleExecute(t *testing.T) {
 	assert.Equal(t, "coin_received", res.Events[8].Type)
 
 	assert.Equal(t, "transfer", res.Events[9].Type)
-	assertAttribute(t, "recipient", bob.String(), res.Events[9].Attributes[0])
-	assertAttribute(t, "sender", contractBech32Addr, res.Events[9].Attributes[1])
-	assertAttribute(t, "amount", "105000denom", res.Events[9].Attributes[2])
+	assertAttribute(t, "amount", "105000denom", res.Events[9].Attributes[0])
+	assertAttribute(t, "recipient", bob.String(), res.Events[9].Attributes[1])
+	assertAttribute(t, "sender", contractBech32Addr, res.Events[9].Attributes[2])
 	// finally, standard x/wasm tag
 
 	// ensure bob now exists and got both payments released
