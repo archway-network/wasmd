@@ -1,0 +1,15 @@
+ok  	github.com/CosmWasm/wasmd/app	(cached)
+?   	github.com/CosmWasm/wasmd/app/params	[no test files]
+ok  	github.com/CosmWasm/wasmd/benchmarks	(cached) [no tests to run]
+?   	github.com/CosmWasm/wasmd/cmd/contract_tests	[no test files]
+?   	github.com/CosmWasm/wasmd/cmd/wasmd	[no test files]
+ok  	github.com/CosmWasm/wasmd/x/wasm	5.799s
+ok  	github.com/CosmWasm/wasmd/x/wasm/client	(cached)
+ok  	github.com/CosmWasm/wasmd/x/wasm/client/cli	(cached)
+?   	github.com/CosmWasm/wasmd/x/wasm/client/rest	[no test files]
+?   	github.com/CosmWasm/wasmd/x/wasm/ibctesting	[no test files]
+ok  	github.com/CosmWasm/wasmd/x/wasm/ioutils	(cached)
+ok  	github.com/CosmWasm/wasmd/x/wasm/keeper	(cached)
+?   	github.com/CosmWasm/wasmd/x/wasm/keeper/wasmtesting	[no test files]
+?   	github.com/CosmWasm/wasmd/x/wasm/simulation	[no test files]
+ok  	github.com/CosmWasm/wasmd/x/wasm/types	(cached)
